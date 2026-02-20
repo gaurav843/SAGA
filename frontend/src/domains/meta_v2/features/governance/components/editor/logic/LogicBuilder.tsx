@@ -1,19 +1,18 @@
 // FILEPATH: frontend/src/domains/meta_v2/features/governance/components/editor/logic/LogicBuilder.tsx
-// @file: Logic Builder (SVO Edition - V2)
+// @file: Logic Builder (SVO Component - V2)
 // @role: 🧠 Logic Container */
 // @author: The Engineer
 // @description: Recursive Subject-Verb-Object Composer for Governance Rules.
-// UPDATED: Swapped local SubjectPicker for V2 Native SubjectPicker.
-// Removed contextFields prop drilling.
-
-// @security-level: LEVEL 9 (UI Validation) */
+// @security-level: LEVEL 9 (Functional State Safety) */
+// @invariant: The AST (root) is the absolute source of truth for the Visual Mode. */
+// @narrator: Traces AST mutations and compilations. */
 
 import React, { useState, useEffect } from 'react';
 import { Card, Space, Button, Input, Select, Typography, Switch } from 'antd';
 import { PlusOutlined, DeleteOutlined, CodeOutlined, BuildOutlined } from '@ant-design/icons';
 
 import { logger } from '@/platform/logging/Narrator';
-import { SubjectPicker } from './SubjectPicker'; // ⚡ V2 IMPORT
+import { SubjectPicker } from './SubjectPicker'; 
 
 const { Text } = Typography;
 
@@ -60,13 +59,12 @@ export const LogicBuilder: React.FC<LogicBuilderProps> = ({
         id: 'root', type: 'GROUP', operator: '&&', children: [] 
     });
 
-    // PARSER (Heuristic Fallback to Code Mode)
+    // ⚡ SAFEGUARD: Switch to CODE mode if there's an existing complex value we can't visually parse yet
     useEffect(() => {
-        if (!value) return;
-        if (value.includes('(') || value.includes('|')) {
+        if (value && root.children?.length === 0) {
             setMode('CODE');
         }
-    }, [value]);
+    }, []); // Only run on mount
 
     // COMPILER
     const compile = (node: LogicNode): string => {
@@ -77,7 +75,9 @@ export const LogicBuilder: React.FC<LogicBuilderProps> = ({
             if (childLogic.length === 1) return childLogic[0];
             return `(${childLogic.join(` ${node.operator} `)})`;
         } else {
+            // ⚡ FIX: Gracefully ignore incomplete rules without destroying the string
             if (!node.subject || !node.verb || node.object === undefined) return "";
+            
             const rhs = node.objectType === 'REFERENCE' 
                 ? node.object 
                 : (typeof node.object === 'number' || node.object === 'true' || node.object === 'false')
@@ -92,12 +92,6 @@ export const LogicBuilder: React.FC<LogicBuilderProps> = ({
     };
 
     // HANDLERS
-    const handleTreeChange = (newRoot: LogicNode) => {
-        setRoot(newRoot);
-        const code = compile(newRoot);
-        onChange(code);
-    };
-
     const findNode = (node: LogicNode, id: string): LogicNode | null => {
         if (node.id === id) return node;
         if (node.children) {
@@ -110,37 +104,53 @@ export const LogicBuilder: React.FC<LogicBuilderProps> = ({
     };
 
     const updateNode = (id: string, patch: Partial<LogicNode>) => {
-        const clone = JSON.parse(JSON.stringify(root));
-        const node = findNode(clone, id);
-        if (node) {
-            Object.assign(node, patch);
-            handleTreeChange(clone);
-        }
+        logger.trace("LOGIC", `AST Update Triggered [${id}]`, patch);
+        
+        // ⚡ FIX: Functional State Update ensures we never drop intermediate keystrokes
+        setRoot(prevRoot => {
+            const clone = JSON.parse(JSON.stringify(prevRoot));
+            const node = findNode(clone, id);
+            if (node) {
+                Object.assign(node, patch);
+                const code = compile(clone);
+                logger.whisper("LOGIC", `Compiled AST: ${code || '<empty>'}`);
+                onChange(code); // Inform parent of the new string
+            }
+            return clone; // Commit the AST change visually regardless of output string
+        });
     };
 
     const addRule = (parentId: string) => {
-        const clone = JSON.parse(JSON.stringify(root));
-        const parent = findNode(clone, parentId);
-        if (parent && parent.children) {
-            parent.children.push({
-                id: `node_${Date.now()}`,
-                type: 'RULE',
-                subject: '',
-                verb: '==',
-                objectType: 'LITERAL',
-                object: ''
-            });
-            handleTreeChange(clone);
-        }
+        logger.trace("LOGIC", `Adding Node to [${parentId}]`, {});
+        setRoot(prevRoot => {
+            const clone = JSON.parse(JSON.stringify(prevRoot));
+            const parent = findNode(clone, parentId);
+            if (parent && parent.children) {
+                parent.children.push({
+                    id: `node_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+                    type: 'RULE',
+                    subject: '', // Strict string init
+                    verb: '==',
+                    objectType: 'LITERAL',
+                    object: ''
+                });
+                onChange(compile(clone));
+            }
+            return clone;
+        });
     };
 
     const removeNode = (parentId: string, nodeId: string) => {
-        const clone = JSON.parse(JSON.stringify(root));
-        const parent = findNode(clone, parentId);
-        if (parent && parent.children) {
-            parent.children = parent.children.filter((c: LogicNode) => c.id !== nodeId);
-            handleTreeChange(clone);
-        }
+        logger.trace("LOGIC", `Removing Node [${nodeId}]`, {});
+        setRoot(prevRoot => {
+            const clone = JSON.parse(JSON.stringify(prevRoot));
+            const parent = findNode(clone, parentId);
+            if (parent && parent.children) {
+                parent.children = parent.children.filter((c: LogicNode) => c.id !== nodeId);
+                onChange(compile(clone));
+            }
+            return clone;
+        });
     };
 
     // RENDERERS
@@ -195,11 +205,11 @@ export const LogicBuilder: React.FC<LogicBuilderProps> = ({
                     </div>
 
                     <div style={{ flex: 4, display: 'flex' }}>
-                         <Input.Group compact>
+                         <Space.Compact style={{ width: '100%' }}>
                              <Select 
                                 style={{ width: '30%' }}
                                 value={node.objectType}
-                                onChange={v => updateNode(node.id, { objectType: v })}
+                                onChange={v => updateNode(node.id, { objectType: v, object: '' })}
                                 options={[
                                     { label: 'Value', value: 'LITERAL' },
                                     { label: 'Ref', value: 'REFERENCE' }
@@ -209,6 +219,7 @@ export const LogicBuilder: React.FC<LogicBuilderProps> = ({
                                  <Input 
                                     style={{ width: '70%' }} 
                                     value={node.object}
+                                    placeholder="Value..."
                                     onChange={e => updateNode(node.id, { object: e.target.value })}
                                  />
                              ) : (
@@ -221,7 +232,7 @@ export const LogicBuilder: React.FC<LogicBuilderProps> = ({
                                      />
                                  </div>
                              )}
-                         </Input.Group>
+                         </Space.Compact>
                     </div>
                     <Button type="text" danger icon={<DeleteOutlined />} onClick={() => removeNode(parentId, node.id)} />
                 </div>
@@ -256,4 +267,3 @@ export const LogicBuilder: React.FC<LogicBuilderProps> = ({
         </div>
     );
 };
-
