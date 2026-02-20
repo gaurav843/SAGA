@@ -1,233 +1,187 @@
+// 
 // FILEPATH: frontend/src/domains/meta/features/switchboard/SwitchboardView.tsx
-// @file: Switchboard Console (Deep Linked + Smooth)
+// @file: Switchboard Console (Manifest Driven)
+// @role: 🎨 UI Presentation */
 // @author: The Engineer
-// @description: The Main Control Panel for Governance.
-// REFACTOR: Implemented 'useUrlState' for Search Persistence.
-// REFACTOR: Uses Global MetaContext for Modal State (?select=NEW).
-// VISUAL: Added <FadeIn> wrapper for standard transitions.
+// @description: Dumb UI implementation. Renders strictly what the Backend Manifest dictates.
+// @security-level: LEVEL 9 (Dumb UI) */
 
-
-import React, { useState, useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { 
     Layout, Card, Button, Typography, Space, Popconfirm, theme, 
-    Input, Table, Badge, Empty, Tag, Tooltip
+    Input, Table, Badge, Empty, Tag
 } from 'antd';
 import { 
-    PlusOutlined, StopOutlined, DeleteOutlined,
-    GlobalOutlined, AppstoreOutlined, ThunderboltOutlined, 
-    SearchOutlined, RobotOutlined, FieldTimeOutlined,
-    DatabaseOutlined, FileProtectOutlined, ReloadOutlined,
-    CheckCircleOutlined, PauseCircleOutlined
+    PlusOutlined, ReloadOutlined, AppstoreOutlined, SearchOutlined, DatabaseOutlined
 } from '@ant-design/icons';
 
-import { useMetaContext } from '../../_kernel/MetaContext'; // ⚡ GLOBAL STATE
-import { useUrlState } from '../../../../platform/hooks/useUrlState'; // ⚡ UNIVERSAL STATE
-import { FadeIn } from '../../../../platform/ui/animation/FadeIn'; // ⚡ ANIMATION
+import { useMetaContext } from '../../_kernel/MetaContext'; 
+import { useUrlState } from '../../../../platform/hooks/useUrlState'; 
+import { FadeIn } from '../../../../platform/ui/animation/FadeIn'; 
+import { IconFactory } from '../../../../platform/ui/icons/IconFactory';
 import { useSwitchboard } from './hooks/useSwitchboard';
 import { AssignmentModal } from './components/AssignmentModal';
-import type { PolicyBinding } from './types';
 
 const { Title, Text } = Typography;
 const { Content } = Layout;
 
 export const SwitchboardView: React.FC = () => {
     const { token } = theme.useToken();
-
-    // 1. GLOBAL CONTEXT (Deep Link for Modal)
     const { selectedItem, setSelectedItem } = useMetaContext();
-
-    // 2. UNIVERSAL URL STATE (Search Persistence)
     const [searchText, setSearchTerm] = useUrlState('q', '');
 
-    // 3. Data Hooks
     const { 
-        activeBindings, 
+        manifest,
+        isLoading, 
+        dispatchAction,
         availablePolicies,
         availableGroups,
-        isLoading, 
-        assignPolicy, 
-        removeAssignment, 
-        isAssigning 
+        assignPolicy,
+        isAssigning
     } = useSwitchboard();
 
-    // Local loading state for individual row actions
-    const [loadingIds, setLoadingIds] = useState<Set<number>>(new Set());
+    // Local loading state to show spinners on specific buttons during transit
+    const [loadingIds, setLoadingIds] = useState<Set<string>>(new Set());
 
-    const handleUnbind = async (id: number) => {
-        setLoadingIds(prev => new Set(prev).add(id));
+    // ⚡ UNIVERSAL ACTION DISPATCHER
+    const handleAction = async (actionKey: string, record: any) => {
+        const rowId = record.id;
+        const taskKey = `${actionKey}-${rowId}`;
+        
+        setLoadingIds(prev => new Set(prev).add(taskKey));
         try {
-            await removeAssignment(id);
+            await dispatchAction({ actionKey, payload: record });
         } finally {
             setLoadingIds(prev => {
                 const next = new Set(prev);
-                next.delete(id);
+                next.delete(taskKey);
                 return next;
             });
         }
     };
 
-    // --- MODAL STATE (Derived from Global) ---
+    // Modal State
     const isAssignmentModalOpen = selectedItem === 'NEW';
     const setAssignmentModalOpen = (open: boolean) => setSelectedItem(open ? 'NEW' : null);
 
-    // --- GROUPING LOGIC ---
-    const jurisdictions = useMemo(() => {
-        const groups: Record<string, PolicyBinding[]> = {};
+    // --- ⚡ MANIFEST COLUMN FACTORY ---
+    const dynamicColumns = useMemo(() => {
+        if (!manifest) return [];
         
-        const filtered = activeBindings.filter(b => 
-            !searchText || 
-            b.target_domain.toLowerCase().includes(searchText.toLowerCase()) ||
-            b.policy?.name.toLowerCase().includes(searchText.toLowerCase()) ||
-            b.group?.name.toLowerCase().includes(searchText.toLowerCase())
-        );
-
-        filtered.forEach(b => {
-            if (!groups[b.target_domain]) groups[b.target_domain] = [];
-            groups[b.target_domain].push(b);
-        });
-
-        // Sort: Active first, then by Priority
-        Object.keys(groups).forEach(key => {
-            groups[key].sort((a, b) => {
-                if (a.is_active !== b.is_active) return a.is_active ? -1 : 1;
-                return (b.priority - a.priority) || (b.id - a.id);
-            });
-        });
-
-        return Object.entries(groups).sort((a, b) => a[0].localeCompare(b[0]));
-    }, [activeBindings, searchText]);
-
-    // --- RENDER HELPERS ---
-    const getScopeIcon = (scope: string) => {
-        if (scope === 'GLOBAL') return <GlobalOutlined />;
-        if (scope === 'JOB') return <RobotOutlined />;
-        if (scope === 'TRANSITION') return <FieldTimeOutlined />;
-        if (scope === 'PROCESS') return <ThunderboltOutlined />;
-        return <AppstoreOutlined />;
-    };
-
-    const getColumns = (domain: string) => [
-        {
-            title: '#',
-            key: 'sequence',
-            width: 50,
-            render: (_: any, record: PolicyBinding, index: number) => (
-                <Text type="secondary" style={{ fontSize: 11, opacity: record.is_active ? 1 : 0.5 }}>{index + 1}</Text>
-            )
-        },
-        {
-            title: 'Policy Source',
-            key: 'policy',
-            render: (_: any, record: PolicyBinding) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const cols: any[] = manifest.columns.map(col => ({
+            title: col.label,
+            key: col.key,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            render: (_: unknown, record: any) => {
+                const cellData = record[col.key];
                 const opacity = record.is_active ? 1 : 0.5;
-                if (record.policy) {
+
+                // God Backend dictating rendering formats via Data Types
+                if (col.data_type === 'SOURCE_TAG') {
                     return (
                         <Space style={{ opacity }}>
-                            <FileProtectOutlined style={{ color: token.colorPrimary }} />
-                            <Text strong>{record.policy.name}</Text>
-                            <Tag bordered={false} style={{ fontSize: 10 }}>v{record.policy.version_major}.{record.policy.version_minor}</Tag>
-                        </Space>
-                    );
-                } else if (record.group) {
-                    return (
-                        <Space style={{ opacity }}>
-                            <AppstoreOutlined style={{ color: token.colorSuccess }} />
-                            <Text strong>{record.group.name}</Text>
-                            <Tag color="cyan" style={{ fontSize: 10 }}>BUNDLE</Tag>
+                            <IconFactory icon={cellData.icon} style={{ color: cellData.color || token.colorPrimary }} />
+                            <Text strong>{cellData.label}</Text>
+                            {cellData.version && <Tag bordered={false} style={{ fontSize: 10 }}>{cellData.version}</Tag>}
                         </Space>
                     );
                 }
-                return <Text type="secondary">Unknown Source</Text>;
+                if (col.data_type === 'SCOPE_TAG') {
+                    return (
+                        <Space style={{ opacity }}>
+                            <IconFactory icon={cellData.icon} />
+                            <span>{cellData.scope}</span>
+                            {cellData.context && <Tag style={{ margin: 0 }}>{cellData.context}</Tag>}
+                        </Space>
+                    );
+                }
+                if (col.data_type === 'STATUS') {
+                    return (
+                        <Tag color={cellData === 'ACTIVE' ? 'success' : 'warning'}>
+                            {cellData}
+                        </Tag>
+                    );
+                }
+                if (col.data_type === 'PRIORITY_TAG') {
+                    return (
+                        <div style={{ opacity }}>
+                            <Tag color={cellData >= 100 ? 'gold' : cellData >= 50 ? 'orange' : 'blue'}>{cellData}</Tag>
+                        </div>
+                    );
+                }
+                return <span style={{ opacity }}>{String(cellData)}</span>;
             }
-        },
-        {
-            title: 'Scope',
-            key: 'scope',
-            render: (_: any, record: PolicyBinding) => (
-                <Space style={{ opacity: record.is_active ? 1 : 0.5 }}>
-                    {getScopeIcon(record.target_scope)}
-                    <span>{record.target_scope}</span>
-                    {record.target_context && (
-                        <Tag style={{ margin: 0 }}>{record.target_context}</Tag>
-                    )}
-                </Space>
-            )
-        },
-        {
-            title: 'Status',
-            key: 'status',
-            width: 100,
-            render: (_: any, record: PolicyBinding) => (
-                record.is_active ? (
-                    <Tag icon={<CheckCircleOutlined />} color="success">Active</Tag>
-                ) : (
-                    <Tag icon={<PauseCircleOutlined />} color="warning">Inactive</Tag>
-                )
-            )
-        },
-        {
-            title: 'Priority',
-            dataIndex: 'priority',
-            key: 'priority',
-            width: 80,
-            render: (p: number, record: PolicyBinding) => (
-                <div style={{ opacity: record.is_active ? 1 : 0.5 }}>
-                    <Tag color={p >= 100 ? 'gold' : p >= 50 ? 'orange' : 'blue'}>{p}</Tag>
-                </div>
-            )
-        },
-        {
+        }));
+
+        // ⚡ ACTION BUTTON FACTORY (Driven by Manifest)
+        cols.push({
             title: 'Action',
             key: 'action',
-            align: 'right' as const,
-            width: 120,
-            render: (_: any, record: PolicyBinding) => {
-                if (record.is_active) {
-                    // STEP 1: DEACTIVATE
-                    return (
-                        <Popconfirm
-                            title="Deactivate Enforcement?"
-                            description="This policy will stop applying, but the binding remains."
-                            onConfirm={() => handleUnbind(record.id)}
-                            okButtonProps={{ loading: loadingIds.has(record.id) }}
-                            okText="Deactivate"
-                        >
+            align: 'right',
+            width: 180,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            render: (_: unknown, record: any) => (
+                <Space>
+                    {manifest.actions.map(action => {
+                        // Compute dynamic labels (e.g. Activate vs Deactivate) if needed,
+                        // though strictly speaking the backend should compute this. We do a minor fallback here for UX.
+                        let computedLabel = action.label;
+                        let computedDanger = action.danger;
+                        
+                        if (action.key === 'TOGGLE_ACTIVE') {
+                            computedLabel = record.is_active ? 'Deactivate' : 'Activate';
+                            computedDanger = record.is_active;
+                        }
+
+                        const taskKey = `${action.key}-${record.id}`;
+                        const btn = (
                             <Button 
                                 type="text" 
                                 size="small" 
-                                style={{ color: token.colorWarning }}
-                                icon={<StopOutlined />}
-                                loading={loadingIds.has(record.id)}
+                                danger={computedDanger}
+                                icon={action.icon ? <IconFactory icon={action.icon} /> : undefined}
+                                loading={loadingIds.has(taskKey)}
+                                onClick={action.requires_confirmation ? undefined : () => handleAction(action.key, record)}
                             >
-                                Deactivate
+                                {computedLabel}
                             </Button>
-                        </Popconfirm>
-                    );
-                } else {
-                    // STEP 2: REMOVE
-                    return (
-                        <Popconfirm
-                            title="Remove Permanently?"
-                            description="This binding configuration will be deleted."
-                            onConfirm={() => handleUnbind(record.id)}
-                            okButtonProps={{ loading: loadingIds.has(record.id), danger: true }}
-                            okText="Remove"
-                        >
-                            <Button 
-                                type="text" 
-                                danger 
-                                size="small" 
-                                icon={<DeleteOutlined />}
-                                loading={loadingIds.has(record.id)}
-                            >
-                                Remove
-                            </Button>
-                        </Popconfirm>
-                    );
-                }
-            }
-        }
-    ];
+                        );
+
+                        if (action.requires_confirmation) {
+                            return (
+                                <Popconfirm
+                                    key={action.key}
+                                    title={action.confirmation_text}
+                                    onConfirm={() => handleAction(action.key, record)}
+                                    okButtonProps={{ loading: loadingIds.has(taskKey), danger: computedDanger }}
+                                >
+                                    {btn}
+                                </Popconfirm>
+                            );
+                        }
+
+                        return React.cloneElement(btn, { key: action.key });
+                    })}
+                </Space>
+            )
+        });
+
+        return cols;
+    }, [manifest, token, loadingIds]);
+
+    // Group data by Domain 
+    const groupedData = useMemo(() => {
+        if (!manifest?.data) return [];
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const groups: Record<string, any[]> = {};
+        manifest.data.forEach(row => {
+            const d = row.domain;
+            if (!groups[d]) groups[d] = [];
+            groups[d].push(row);
+        });
+        return Object.entries(groups).sort((a, b) => a[0].localeCompare(b[0]));
+    }, [manifest]);
 
     return (
         <FadeIn>
@@ -242,7 +196,7 @@ export const SwitchboardView: React.FC = () => {
                                     Switchboard
                                 </Space>
                             </Title>
-                            <Text type="secondary">Manage Active Jurisdictions.</Text>
+                            <Text type="secondary">System Event Wiring & Jurisdiction Enforcement.</Text>
                         </div>
                         <Space>
                             <Button icon={<ReloadOutlined />} onClick={() => window.location.reload()} />
@@ -268,11 +222,11 @@ export const SwitchboardView: React.FC = () => {
                 <Content style={{ flex: 1, overflowY: 'auto', padding: '0 24px 24px' }}>
                     {isLoading ? (
                         <Card loading />
-                    ) : jurisdictions.length === 0 ? (
+                    ) : groupedData.length === 0 ? (
                         <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No active policies enforced." />
                     ) : (
                         <Space direction="vertical" style={{ width: '100%' }} size="large">
-                            {jurisdictions.map(([domain, bindings]) => (
+                            {groupedData.map(([domain, rows]) => (
                                 <Card 
                                     key={domain}
                                     size="small"
@@ -280,15 +234,15 @@ export const SwitchboardView: React.FC = () => {
                                         <Space>
                                             <DatabaseOutlined style={{ color: token.colorTextSecondary }} />
                                             <Text strong style={{ fontSize: 16 }}>{domain}</Text>
-                                            <Badge count={bindings.filter(b => b.is_active).length} style={{ backgroundColor: token.colorFillContent, color: token.colorText }} />
+                                            <Badge count={rows.filter(r => r.is_active).length} style={{ backgroundColor: token.colorFillContent, color: token.colorText }} />
                                         </Space>
                                     }
                                     style={{ borderColor: token.colorBorderSecondary }}
                                     styles={{ body: { padding: 0 } }}
                                 >
                                     <Table 
-                                        dataSource={bindings}
-                                        columns={getColumns(domain)}
+                                        dataSource={rows}
+                                        columns={dynamicColumns}
                                         rowKey="id"
                                         pagination={false} 
                                         size="small"
@@ -311,4 +265,3 @@ export const SwitchboardView: React.FC = () => {
         </FadeIn>
     );
 };
-

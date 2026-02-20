@@ -1,54 +1,39 @@
-/* FILEPATH: frontend/src/domains/meta/features/switchboard/types.ts */
-/* @file Switchboard Types */
-/* @author The Engineer */
-/* @description Defines the shapes for Policies and Bindings.
- * MATCHES: backend/app/core/meta/schemas.py (PolicyBindingRead, BindingDraft)
- * REFACTOR: Replaced 'policy_tag' with 'policy_group_id'.
- */
+// FILEPATH: frontend/src/domains/meta/features/switchboard/types.ts
+// @file: Switchboard Types (Manifest Driven)
+// @author: The Engineer
+// @description: Defines the 'Dumb UI' shapes for the Switchboard.
+// The UI knows nothing about 'Policies' or 'Groups', only 'Rows' and 'Columns'.
 
-import type { PolicyGroup } from '../policy_groups/types';
 
-// --- 1. THE ATOM (Policy) ---
-export interface PolicyDefinition {
-    id: number;
+export interface SwitchboardUIColumn {
     key: string;
-    name: string;
-    description?: string;
-    rules: any[];
-    tags: string[];
-    is_active: boolean;
-    version_major: number;
-    version_minor: number;
-    is_latest: boolean;
+    label: string;
+    data_type: string;
+    icon?: string;
+    color?: string;
 }
 
-// --- 2. THE ASSIGNMENT (Binding) ---
-export interface PolicyBinding {
-    id: number;
-    
-    // Source Polymorphism (One is always set)
-    policy_id?: number;
-    policy_group_id?: number; // ⚡ NEW: Strict Link to Group Entity
-    
-    // Expanded Relations (For UI display)
-    policy?: PolicyDefinition;
-    group?: PolicyGroup;      // ⚡ NEW: Expanded Group Data
-
-    // Target Polymorphism
-    binding_type: 'ENTITY'; 
-    target_domain: string;
-    target_scope: BindingScope;
-    target_context?: string;
-    
-    priority: number;
-    is_active: boolean;
+export interface SwitchboardUIAction {
+    key: string;
+    label: string;
+    icon?: string;
+    danger: boolean;
+    requires_confirmation: boolean;
+    confirmation_text?: string;
 }
 
-// --- 3. OPTIONS ---
+export interface SwitchboardManifest {
+    columns: SwitchboardUIColumn[];
+    actions: SwitchboardUIAction[];
+    // We use `any` here because the row structure is entirely dynamic and driven by the backend schema
+    data: any[]; 
+}
+
+// --- OPTIONS (Used by the Assignment Modal) ---
 export type BindingScope = 'GLOBAL' | 'DOMAIN' | 'PROCESS' | 'TRANSITION' | 'FIELD' | 'JOB';
 
 export interface BindingDraft {
-    // ⚡ Logic: Must provide either policy_id OR policy_group_id
+    // Logic: Must provide either policy_id OR policy_group_id
     policy_id?: number;
     policy_group_id?: number;
     
@@ -60,3 +45,11 @@ export interface BindingDraft {
     is_active: boolean;
 }
 
+// Kept for modal dropdowns
+export interface PolicyDefinition {
+    id: number;
+    key: string;
+    name: string;
+    description?: string;
+    is_active: boolean;
+}

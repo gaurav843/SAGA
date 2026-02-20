@@ -1,8 +1,9 @@
 # FILEPATH: backend/app/core/meta/schemas.py
-# @file Meta-Kernel Contracts
-# @author The Engineer (ansav8@gmail.com)
-# @description Pydantic Schemas for the Adaptive Data Engine.
-#              UPDATED: Removed 'policy_tag' support from Binding.
+# @file: Meta-Kernel Contracts
+# @author: The Engineer (ansav8@gmail.com)
+# @description: Pydantic Schemas for the Adaptive Data Engine.
+# UPDATED: Added Manifest-Driven UI contracts for the Switchboard.
+# @security-level: LEVEL 9 (Type Safety)
 
 from typing import Optional, List, Dict, Any, Union
 from datetime import datetime
@@ -14,8 +15,6 @@ from app.core.meta.constants import (
     PolicyResolutionStrategy, ViewEngineType, ScopeType, BindingType
 )
 
-# ... [Attribute Schemas Omitted - Same as Previous] ...
-# (Assuming AttributeBase and related classes are unchanged)
 class SelectOption(BaseModel):
     label: str
     value: str
@@ -177,7 +176,6 @@ class PolicyBindingRead(PolicyBindingBase):
     group: Optional[PolicyGroupRead] = None
     class Config: from_attributes = True
 
-# ... [Rule/DryRun Schemas Preserved] ...
 class RuleEffect(BaseModel):
     type: RuleActionType
     message: Optional[str] = None
@@ -212,3 +210,26 @@ class DryRunResult(BaseModel):
     mutations: List[Dict[str, Any]] = []
     side_effects: List[Dict[str, Any]] = []
 
+# ==============================================================================
+#  5. DUMB UI MANIFEST (Switchboard V2)
+# ==============================================================================
+
+class SwitchboardUIColumn(BaseModel):
+    key: str
+    label: str
+    data_type: str = "TEXT"
+    icon: Optional[str] = None
+    color: Optional[str] = None
+
+class SwitchboardUIAction(BaseModel):
+    key: str
+    label: str
+    icon: Optional[str] = None
+    danger: bool = False
+    requires_confirmation: bool = False
+    confirmation_text: Optional[str] = None
+
+class SwitchboardManifest(BaseModel):
+    columns: List[SwitchboardUIColumn]
+    actions: List[SwitchboardUIAction]
+    data: List[Dict[str, Any]]

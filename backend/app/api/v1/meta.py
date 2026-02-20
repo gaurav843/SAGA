@@ -1,11 +1,14 @@
+# 
 # FILEPATH: backend/app/api/v1/meta.py
 # @file: Meta-Kernel API Endpoints
 # @author: The Engineer (ansav8@gmail.com)
 # @description: Exposes the Definition & Binding Management API.
+# UPDATED: Injected Manifest-Driven UI endpoints for Switchboard V2.
 # @security-level: LEVEL 1 (Domain Access)
 
-from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query
+from typing import List, Optional, Dict, Any
+from fastapi import APIRouter, Depends, HTTPException, Query, Body
+from pydantic import BaseModel
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, distinct
@@ -17,7 +20,8 @@ from app.core.meta.schemas import (
     PolicyBindingCreate, PolicyBindingRead, PolicyBindingUpdate,
     AttributeCreate, AttributeRead, AttributeUpdate,
     RuleCreate, RuleRead,
-    DryRunRequest, DryRunResult
+    DryRunRequest, DryRunResult,
+    SwitchboardManifest # ⚡ NEW: Dumb UI Contract
 )
 from app.core.kernel.registry import domain_registry
 from app.core.meta.models import AttributeDefinition
@@ -25,14 +29,14 @@ from app.core.meta.models import AttributeDefinition
 # ⚡ IMPORT FEATURE ROUTERS
 from app.core.meta.features.groups.router import router as groups_router
 from app.core.meta.features.states.router import router as states_router
-from app.core.meta.features.topology.router import router as topology_router # ⚡ NEW
+from app.core.meta.features.topology.router import router as topology_router 
 
 router = APIRouter()
 
 # ⚡ MOUNT FEATURE ROUTERS
 router.include_router(groups_router, prefix="/groups", tags=["Policy Groups"])
 router.include_router(states_router, prefix="/states", tags=["Workflows"])
-router.include_router(topology_router, prefix="/topology", tags=["System Topology"]) # ⚡ MOUNT
+router.include_router(topology_router, prefix="/topology", tags=["System Topology"]) 
 
 # ==============================================================================
 #  1. POLICIES (GOVERNANCE)
@@ -78,7 +82,7 @@ async def restore_policy_version(version_id: int, db: AsyncSession = Depends(get
         raise HTTPException(status_code=400, detail=str(e))
 
 # ==============================================================================
-#  2. BINDINGS (SWITCHBOARD)
+#  2. BINDINGS & SWITCHBOARD MANIFEST (UI DRIVEN)
 # ==============================================================================
 
 @router.get("/bindings", response_model=List[PolicyBindingRead])
@@ -110,6 +114,50 @@ async def delete_binding(id: int, db: AsyncSession = Depends(get_db)):
     if not status:
         raise HTTPException(status_code=404, detail="Binding not found")
     return {"message": "Binding removed", "status": status}
+
+# ⚡ NEW: MANIFEST-DRIVEN SWITCHBOARD ENDPOINTS
+
+@router.get("/switchboard/manifest", response_model=SwitchboardManifest)
+async def get_switchboard_manifest(
+    domain: Optional[str] = Query(None),
+    search: Optional[str] = Query(None),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    @description: Returns the compiled UI Schema and hydrated Data for the Dumb Frontend.
+    """
+    return await MetaService.get_switchboard_manifest(db, domain=domain, search=search)
+
+class SwitchboardActionPayload(BaseModel):
+    action_key: str
+    payload: Dict[str, Any]
+
+@router.post("/switchboard/execute-action")
+async def execute_switchboard_action(
+    req: SwitchboardActionPayload,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    @description: Universal action dispatcher for the Switchboard. 
+    The frontend sends an intent, the backend decides what it means.
+    """
+    action = req.action_key
+    data = req.payload
+    
+    if action == "TOGGLE_ACTIVE":
+        binding_id = data.get("id")
+        current_state = data.get("is_active", True)
+        update_payload = PolicyBindingUpdate(is_active=not current_state)
+        await MetaService.update_binding(db, binding_id, update_payload)
+        return {"status": "success", "message": "Enforcement toggled"}
+        
+    elif action == "DELETE_BINDING":
+        binding_id = data.get("id")
+        await MetaService.delete_binding(db, binding_id)
+        return {"status": "success", "message": "Jurisdiction removed"}
+        
+    raise HTTPException(status_code=400, detail=f"Unknown Action: {action}")
+
 
 # ==============================================================================
 #  3. ATTRIBUTES (DICTIONARY)
@@ -175,12 +223,10 @@ async def get_domain_schema(
 @router.get("/domains")
 async def list_domains(db: AsyncSession = Depends(get_db)):
     # 1. Dynamic Domains from DB (The "Wild" Ones)
-    # Allows discovery of domains that exist only via custom attributes
     result = await db.execute(select(distinct(AttributeDefinition.domain)))
     dynamic_domains = result.scalars().all()
     
     # 2. System Domains from Registry (The "Official" Ones)
-    # ⚡ FIX: Passing 'db' session as required by the new Manager to fetch Type Defs
     registered_domains = await domain_registry.get_all_summaries(db)
     
     # 3. Merge Strategy
@@ -188,13 +234,12 @@ async def list_domains(db: AsyncSession = Depends(get_db)):
     
     # A. Add Registered Domains (Source of Truth)
     for d in registered_domains:
-        # Pydantic model dump to dictionary for mutability
         data = d.model_dump()
         domain_map[data["key"]] = {
             "key": data["key"],
             "label": data["label"],
             "type": data["type"],
-            "type_def": data["type_def"], # ⚡ Handshake Payload (Color/Icon)
+            "type_def": data["type_def"], 
             "system_module": data.get("system_module", "GENERAL"),
             "module_label": data.get("module_label", "General"),
             "module_icon": data.get("module_icon", "antd:AppstoreOutlined"),
@@ -209,7 +254,7 @@ async def list_domains(db: AsyncSession = Depends(get_db)):
             domain_map[d_key] = {
                 "key": d_key,
                 "label": d_key.replace('_', ' ').title(),
-                "type": "STANDARD", # Default assumption for wild domains
+                "type": "STANDARD", 
                 "system_module": "DYNAMIC", 
                 "module_label": "Dynamic Data",
                 "module_icon": "antd:DatabaseOutlined",
@@ -219,4 +264,3 @@ async def list_domains(db: AsyncSession = Depends(get_db)):
             }
 
     return list(domain_map.values())
-

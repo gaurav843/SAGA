@@ -1,5 +1,5 @@
 # 🗺️ SYSTEM ATLAS: `backend/`
-**Generated:** 2026-02-20 13:37
+**Generated:** 2026-02-20 15:40
 
 ---
 ### 📄 `backend/alembic/env.py`
@@ -55,6 +55,11 @@
 - ƒ **`create_binding`**
 - ƒ **`update_binding`**
 - ƒ **`delete_binding`**
+- ƒ **`get_switchboard_manifest`**
+    > *Returns the compiled UI Schema and hydrated Data for the Dumb Frontend.*
+- 📦 **`SwitchboardActionPayload`**
+- ƒ **`execute_switchboard_action`**
+    > *Universal action dispatcher for the Switchboard.*
 - ƒ **`create_attribute`**
 - ƒ **`update_attribute`**
 - ƒ **`delete_attribute`**
@@ -64,12 +69,9 @@
     > *SCHEMA FUSION ENDPOINT.*
 - ƒ **`list_domains`**
     * **1.** Dynamic Domains from DB (The "Wild" Ones)
-    * Allows discovery of domains that exist only via custom attributes
     * **2.** System Domains from Registry (The "Official" Ones)
-    * **⚡ FIX:** Passing 'db' session as required by the new Manager to fetch Type Defs
     * **3.** Merge Strategy
     * A. Add Registered Domains (Source of Truth)
-    * Pydantic model dump to dictionary for mutability
     * B. Add Dynamic Domains (if any found that aren't registered)
 
 
@@ -1264,6 +1266,9 @@
 - 📦 **`RuleRead`**
 - 📦 **`DryRunRequest`**
 - 📦 **`DryRunResult`**
+- 📦 **`SwitchboardUIColumn`**
+- 📦 **`SwitchboardUIAction`**
+- 📦 **`SwitchboardManifest`**
 
 ### 📄 `backend/app/core/meta/service.py`
 **Components & Logic:**
@@ -1280,9 +1285,20 @@
       * JSONB contains check: tags @> '["domain:XYZ"]'
 
   * 🔹 **`create_binding`**
+      * ⚡ KERNEL RELAY EMISSION
+
   * 🔹 **`update_binding`**
+      * ⚡ KERNEL RELAY EMISSION
+
   * 🔹 **`delete_binding`**
+      * ⚡ KERNEL RELAY EMISSION
+
   * 🔹 **`get_bindings`**
+  * 🔹 **`get_switchboard_manifest`**
+      > *⚡ THE DUMB UI FUSION ENGINE*
+      * God Logic: Resolve Source
+      * God Logic: Resolve Target Icon
+
   * 🔹 **`create_attribute`**
   * 🔹 **`get_attributes`**
   * 🔹 **`update_attribute`**

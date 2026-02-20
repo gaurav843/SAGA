@@ -1,24 +1,61 @@
-/* FILEPATH: frontend/src/domains/meta/features/switchboard/hooks/useSwitchboard.ts */
-/* @file Switchboard Logic Hook */
-/* @author The Engineer */
-/* @description Manages fetching and binding of Policies AND Policy Groups.
- * UPDATED: Uses Centralized Kernel Configuration via Alias.
- */
+// FILEPATH: frontend/src/domains/meta/features/switchboard/hooks/useSwitchboard.ts
+// @file: Switchboard Logic Hook (Dumb UI Adapter)
+// @author: The Engineer
+// @description: Connects the Switchboard View to the Backend Manifest Engine.
+// All business logic and data aggregation is deferred to the Server.
+
+// @security-level: LEVEL 9 (UI Delegation) */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { App } from 'antd';
-import type { PolicyDefinition, PolicyBinding, BindingDraft } from '../types';
-import type { PolicyGroup } from '../../policy_groups/types'; // Import from sibling feature
+
 // ⚡ FRACTAL IMPORT
 import { API_BASE_URL } from '@kernel/config';
+import type { SwitchboardManifest, BindingDraft, PolicyDefinition } from '../types';
+import type { PolicyGroup } from '../../policy_groups/types';
 
 export const useSwitchboard = (domainKey?: string) => {
     const queryClient = useQueryClient();
     const { message } = App.useApp();
 
-    // 1. FETCH AVAILABLE POLICIES (The Atoms)
-    const { data: policies = [], isLoading: isLoadingPolicies } = useQuery({
+    // 1. FETCH MANIFEST (The God Schema)
+    const { data: manifest, isLoading: isManifestLoading } = useQuery({
+        queryKey: ['meta', 'switchboard', 'manifest', domainKey || 'ALL'],
+        queryFn: async () => {
+            const params: Record<string, string> = {};
+            if (domainKey) params.domain = domainKey;
+            
+            const res = await axios.get<SwitchboardManifest>(`${API_BASE_URL}/api/v1/meta/switchboard/manifest`, { params });
+            return res.data;
+        }
+    });
+
+    // 2. DISPATCH ACTION (Universal Mutation)
+    // The frontend sends an intent (actionKey) and the payload. The backend decides what happens.
+    const actionMutation = useMutation({
+        mutationFn: async ({ actionKey, payload }: { actionKey: string, payload: Record<string, unknown> }) => {
+            return axios.post(`${API_BASE_URL}/api/v1/meta/switchboard/execute-action`, {
+                action_key: actionKey,
+                payload
+            });
+        },
+        onSuccess: (res) => {
+            queryClient.invalidateQueries({ queryKey: ['meta', 'switchboard'] });
+            if (res.data?.message) {
+                message.success(res.data.message);
+            }
+        },
+        onError: (err: any) => {
+            message.error(err.response?.data?.detail || 'Action Failed');
+        }
+    });
+
+    // -------------------------------------------------------------------------
+    // LEGACY DATA FOR MODAL
+    // We keep these standard REST calls just to populate the "Create Binding" dropdowns.
+    // -------------------------------------------------------------------------
+    const { data: policies = [] } = useQuery({
         queryKey: ['meta', 'policies', 'list'],
         queryFn: async () => {
             const res = await axios.get<PolicyDefinition[]>(`${API_BASE_URL}/api/v1/meta/policies`);
@@ -26,8 +63,7 @@ export const useSwitchboard = (domainKey?: string) => {
         }
     });
 
-    // 2. FETCH AVAILABLE GROUPS (The Bundles) - ⚡ NEW
-    const { data: groups = [], isLoading: isLoadingGroups } = useQuery({
+    const { data: groups = [] } = useQuery({
         queryKey: ['meta', 'groups', 'list'],
         queryFn: async () => {
             const res = await axios.get<PolicyGroup[]>(`${API_BASE_URL}/api/v1/meta/groups`);
@@ -35,70 +71,26 @@ export const useSwitchboard = (domainKey?: string) => {
         }
     });
 
-    // 3. FETCH ACTIVE BINDINGS (The Assignments)
-    const { data: bindings = [], isLoading: isLoadingBindings } = useQuery({
-        queryKey: ['meta', 'bindings', domainKey || 'ALL'],
-        queryFn: async () => {
-            const params: any = {};
-            if (domainKey) params.domain = domainKey;
-            
-            const res = await axios.get<PolicyBinding[]>(`${API_BASE_URL}/api/v1/meta/bindings`, { params });
-            return res.data;
-        },
-        enabled: true 
-    });
-
-    // 4. CREATE ASSIGNMENT
     const bindMutation = useMutation({
         mutationFn: async (draft: BindingDraft) => {
             return axios.post(`${API_BASE_URL}/api/v1/meta/bindings`, draft);
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['meta', 'bindings'] });
+            queryClient.invalidateQueries({ queryKey: ['meta', 'switchboard'] });
             message.success('Policy Enforced');
-        },
-        onError: (err: any) => {
-            message.error(err.response?.data?.detail || 'Assignment Failed');
-        }
-    });
-
-    // 5. UPDATE ASSIGNMENT
-    const updateMutation = useMutation({
-        mutationFn: async ({ id, data }: { id: number, data: Partial<PolicyBinding> }) => {
-            return axios.patch(`${API_BASE_URL}/api/v1/meta/bindings/${id}`, data);
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['meta', 'bindings'] });
-        },
-        onError: (err: any) => {
-            message.error(err.response?.data?.detail || 'Update Failed');
-        }
-    });
-
-    // 6. REMOVE ASSIGNMENT
-    const unbindMutation = useMutation({
-        mutationFn: async (bindingId: number) => {
-            return axios.delete(`${API_BASE_URL}/api/v1/meta/bindings/${bindingId}`);
-        },
-        onSuccess: (data: any) => {
-            queryClient.invalidateQueries({ queryKey: ['meta', 'bindings'] });
-            message.success(data?.data?.message || 'Assignment Removed');
         }
     });
 
     return {
-        // Data
-        availablePolicies: policies,
-        availableGroups: groups, // ⚡ EXPOSED
-        activeBindings: bindings,
-        isLoading: isLoadingPolicies || isLoadingBindings || isLoadingGroups,
-
-        // Actions
-        assignPolicy: bindMutation.mutateAsync,
-        updateAssignment: updateMutation.mutateAsync,
-        removeAssignment: unbindMutation.mutateAsync,
+        // Manifest State
+        manifest,
+        isLoading: isManifestLoading,
+        dispatchAction: actionMutation.mutateAsync,
         
+        // Modal State
+        availablePolicies: policies,
+        availableGroups: groups, 
+        assignPolicy: bindMutation.mutateAsync,
         isAssigning: bindMutation.isPending
     };
 };
-

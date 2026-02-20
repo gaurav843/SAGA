@@ -3,9 +3,10 @@
 # @author: The Engineer (ansav8@gmail.com)
 # @description: Orchestrates the Lifecycle of Definitions.
 # @security-level: LEVEL 9 (Safety Interlocks)
-# @updated: Added Tag-Driven Filtering to `get_policies`.
+# @updated: Integrated Manifest-Driven Switchboard logic and KernelRelay (SystemOutbox) emission.
 
 import logging
+import json
 import jmespath
 from typing import List, Optional, Dict, Any
 
@@ -30,6 +31,7 @@ from app.core.meta.schemas import (
 from app.core.meta.constants import ScopeType
 from app.core.meta.engine import policy_engine
 from app.core.kernel.registry import domain_registry 
+from app.core.kernel.models import SystemOutbox # ⚡ Event Relay
 
 # ⚡ SYSTEM MODELS
 from app.domains.system.models import KernelDomain
@@ -228,6 +230,17 @@ class MetaService:
             loaded_obj = result.scalars().first()
             
             await MetaService.invalidate_cache(payload.target_domain)
+            
+            # ⚡ KERNEL RELAY EMISSION
+            event = SystemOutbox(
+                event_type="SWITCHBOARD:BINDING_CREATED",
+                entity_id=str(loaded_obj.id),
+                domain="META",
+                payload={"target_domain": loaded_obj.target_domain, "target_scope": loaded_obj.target_scope}
+            )
+            db.add(event)
+            await db.commit()
+            
             return loaded_obj
 
         except Exception as e:
@@ -254,6 +267,17 @@ class MetaService:
         loaded_obj = result.scalars().first()
         
         await MetaService.invalidate_cache(db_obj.target_domain)
+        
+        # ⚡ KERNEL RELAY EMISSION
+        event = SystemOutbox(
+            event_type="SWITCHBOARD:BINDING_UPDATED",
+            entity_id=str(loaded_obj.id),
+            domain="META",
+            payload={"target_domain": loaded_obj.target_domain, "is_active": loaded_obj.is_active}
+        )
+        db.add(event)
+        await db.commit()
+
         return loaded_obj
 
     @staticmethod
@@ -264,14 +288,28 @@ class MetaService:
         if not db_obj: return None
 
         status_action = ""
+        target_domain = db_obj.target_domain
+
         if db_obj.is_active:
             db_obj.is_active = False
             status_action = "DEACTIVATED"
         else:
             await db.delete(db_obj)
             status_action = "DELETED"
+        
         await db.commit()
-        await MetaService.invalidate_cache(db_obj.target_domain)
+        await MetaService.invalidate_cache(target_domain)
+        
+        # ⚡ KERNEL RELAY EMISSION
+        event = SystemOutbox(
+            event_type="SWITCHBOARD:BINDING_DELETED",
+            entity_id=str(binding_id),
+            domain="META",
+            payload={"action": status_action, "target_domain": target_domain}
+        )
+        db.add(event)
+        await db.commit()
+
         return status_action
 
     @staticmethod
@@ -291,6 +329,82 @@ class MetaService:
             
         result = await db.execute(stmt.order_by(desc(PolicyBinding.priority)))
         return result.scalars().all()
+
+    @staticmethod
+    async def get_switchboard_manifest(db: AsyncSession, domain: Optional[str] = None, search: Optional[str] = None) -> Dict[str, Any]:
+        """
+        ⚡ THE DUMB UI FUSION ENGINE
+        Reads all bindings and returns a completely formatted, view-ready dictionary
+        so the frontend requires zero logic.
+        """
+        bindings = await MetaService.get_bindings(db, domain=domain, search=search)
+        
+        columns = [
+            {"key": "source", "label": "Policy / Bundle Source", "data_type": "SOURCE_TAG"},
+            {"key": "target", "label": "Jurisdiction Scope", "data_type": "SCOPE_TAG"},
+            {"key": "status", "label": "Enforcement Status", "data_type": "STATUS"},
+            {"key": "priority", "label": "Priority", "data_type": "PRIORITY_TAG"}
+        ]
+        
+        actions = [
+            {"key": "TOGGLE_ACTIVE", "label": "Toggle", "icon": "antd:SwapOutlined", "danger": False, "requires_confirmation": True, "confirmation_text": "Change enforcement status?"},
+            {"key": "DELETE_BINDING", "label": "Remove", "icon": "antd:DeleteOutlined", "danger": True, "requires_confirmation": True, "confirmation_text": "Permanently remove this jurisdiction?"}
+        ]
+
+        data = []
+        for b in bindings:
+            # God Logic: Resolve Source
+            if b.policy:
+                src_label = b.policy.name
+                src_type = "POLICY"
+                src_version = f"v{b.policy.version_major}.{b.policy.version_minor}"
+                src_icon = "antd:FileProtectOutlined"
+                src_color = "blue"
+            elif b.group:
+                src_label = b.group.name
+                src_type = "BUNDLE"
+                src_version = f"({len(b.group.policy_keys)} rules)"
+                src_icon = "antd:AppstoreOutlined"
+                src_color = "cyan"
+            else:
+                src_label = "Unknown"
+                src_type = "UNKNOWN"
+                src_version = ""
+                src_icon = "antd:QuestionOutlined"
+                src_color = "default"
+
+            # God Logic: Resolve Target Icon
+            target_icon = "antd:AppstoreOutlined"
+            if b.target_scope == 'GLOBAL': target_icon = "antd:GlobalOutlined"
+            elif b.target_scope == 'JOB': target_icon = "antd:RobotOutlined"
+            elif b.target_scope == 'TRANSITION': target_icon = "antd:FieldTimeOutlined"
+            elif b.target_scope == 'PROCESS': target_icon = "antd:ThunderboltOutlined"
+
+            data.append({
+                "id": b.id,
+                "domain": b.target_domain,
+                "source": {
+                    "label": src_label,
+                    "type": src_type,
+                    "version": src_version,
+                    "icon": src_icon,
+                    "color": src_color
+                },
+                "target": {
+                    "scope": b.target_scope,
+                    "context": b.target_context,
+                    "icon": target_icon
+                },
+                "status": "ACTIVE" if b.is_active else "INACTIVE",
+                "priority": b.priority,
+                "is_active": b.is_active
+            })
+            
+        return {
+            "columns": columns,
+            "actions": actions,
+            "data": data
+        }
 
     # ==============================================================================
     #  3. ATTRIBUTES (DICTIONARY)
@@ -446,4 +560,3 @@ class MetaService:
     @staticmethod
     async def invalidate_cache(domain: str):
         logger.info(f"🔥 [CACHE] Invalidated for Domain: {domain}")
-

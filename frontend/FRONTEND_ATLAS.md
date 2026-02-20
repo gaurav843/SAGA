@@ -1,5 +1,5 @@
 # 🗺️ FLODOCK SYSTEM ATLAS (Prism V10)
-**Generated:** 2026-02-20 13:37
+**Generated:** 2026-02-20 15:40
 **Mode:** Total Recall (Full Comment Extraction).
 
 ---
@@ -767,10 +767,6 @@
 ### 📄 `MetaRoot.tsx`
 > Provides the MetaContext and persistent Layout Shell for the Meta Kernel.
 
-| Attribute | Value |
-| :--- | :--- |
-| **security-level** | `LEVEL 0 */` |
-
 **Components & Logic:**
 
 * **`MetaRoot`**
@@ -1424,8 +1420,8 @@
 
 | Attribute | Value |
 | :--- | :--- |
-| **security-level** | `LEVEL 9 (Schema Fusion)` |
-| **updated** | `Aligned API calls with generated OpenAPI SDK. Preserved Delete logic.` |
+| **security-level** | `LEVEL 9 (Schema Fusion) */` |
+| **updated** | `Aligned API calls with generated OpenAPI SDK. Preserved Delete logic. */` |
 
 **Components & Logic:**
 
@@ -2329,22 +2325,25 @@
 ## 📂 `frontend/src/domains/meta/features/switchboard/`
 
 ### 📄 `SwitchboardView.tsx`
-> The Main Control Panel for Governance.
+> Dumb UI implementation. Renders strictly what the Backend Manifest dictates.
+
+| Attribute | Value |
+| :--- | :--- |
+| **security-level** | `LEVEL 9 (Dumb UI) */` |
 
 **Components & Logic:**
 
 * **`SwitchboardView`**
   * **Logic Flow:**
-    * `1. GLOBAL CONTEXT (Deep Link for Modal)`
-    * `2. UNIVERSAL URL STATE (Search Persistence)`
-    * `3. Data Hooks`
-    * `Local loading state for individual row actions`
-    * `--- MODAL STATE (Derived from Global) ---`
-    * `--- GROUPING LOGIC ---`
-    * `Sort: Active first, then by Priority`
-    * `--- RENDER HELPERS ---`
-    * `STEP 1: DEACTIVATE`
-    * `STEP 2: REMOVE`
+    * `Local loading state to show spinners on specific buttons during transit`
+    * `⚡ UNIVERSAL ACTION DISPATCHER`
+    * `Modal State`
+    * `--- ⚡ MANIFEST COLUMN FACTORY ---`
+    * `God Backend dictating rendering formats via Data Types`
+    * `⚡ ACTION BUTTON FACTORY (Driven by Manifest)`
+    * `Compute dynamic labels (e.g. Activate vs Deactivate) if needed,`
+    * `though strictly speaking the backend should compute this. We do a minor fallback here for UX.`
+    * `Group data by Domain`
 
 ---
 ## 📂 `frontend/src/domains/meta/features/switchboard/components/`
@@ -2376,45 +2375,45 @@
 ## 📂 `frontend/src/domains/meta/features/switchboard/hooks/`
 
 ### 📄 `useSwitchboard.ts`
-> FILEPATH: frontend/src/domains/meta/features/switchboard/hooks/useSwitchboard.ts */
+> Connects the Switchboard View to the Backend Manifest Engine.
 
 **Components & Logic:**
 
 * **`useSwitchboard`**
   * **Logic Flow:**
-    * `1. FETCH AVAILABLE POLICIES (The Atoms)`
-    * `2. FETCH AVAILABLE GROUPS (The Bundles) - ⚡ NEW`
-    * `3. FETCH ACTIVE BINDINGS (The Assignments)`
-    * `4. CREATE ASSIGNMENT`
-    * `5. UPDATE ASSIGNMENT`
-    * `6. REMOVE ASSIGNMENT`
-    * `Data`
-    * `Actions`
+    * `1. FETCH MANIFEST (The God Schema)`
+    * `2. DISPATCH ACTION (Universal Mutation)`
+    * `The frontend sends an intent (actionKey) and the payload. The backend decides what happens.`
+    * `-------------------------------------------------------------------------`
+    * `LEGACY DATA FOR MODAL`
+    * `We keep these standard REST calls just to populate the "Create Binding" dropdowns.`
+    * `-------------------------------------------------------------------------`
+    * `Manifest State`
+    * `Modal State`
 
 ---
 ## 📂 `frontend/src/domains/meta/features/switchboard/`
 
 ### 📄 `types.ts`
-> FILEPATH: frontend/src/domains/meta/features/switchboard/types.ts */
+> Defines the 'Dumb UI' shapes for the Switchboard.
 
 **Components & Logic:**
 
-* **`PolicyDefinition`**
-  * 📝 *--- 1. THE ATOM (Policy) ---*
+* **`SwitchboardUIColumn`**
+  * 📝 *Defines the 'Dumb UI' shapes for the Switchboard.*
+* **`SwitchboardUIAction`**
+* **`SwitchboardManifest`**
   * **Logic Flow:**
-    * `--- 2. THE ASSIGNMENT (Binding) ---`
-* **`PolicyBinding`**
-  * 📝 *--- 2. THE ASSIGNMENT (Binding) ---*
-  * **Logic Flow:**
-    * `Source Polymorphism (One is always set)`
-    * `Expanded Relations (For UI display)`
-    * `Target Polymorphism`
-    * `--- 3. OPTIONS ---`
+    * `We use `any` here because the row structure is entirely dynamic and driven by the backend schema`
+    * `--- OPTIONS (Used by the Assignment Modal) ---`
 * **`BindingScope`**
-  * 📝 *--- 3. OPTIONS ---*
+  * 📝 *--- OPTIONS (Used by the Assignment Modal) ---*
 * **`BindingDraft`**
   * **Logic Flow:**
-    * `⚡ Logic: Must provide either policy_id OR policy_group_id`
+    * `Logic: Must provide either policy_id OR policy_group_id`
+    * `Kept for modal dropdowns`
+* **`PolicyDefinition`**
+  * 📝 *Kept for modal dropdowns*
 
 ---
 ## 📂 `frontend/src/domains/meta/`
@@ -3083,7 +3082,12 @@
 
 ---
 ### 📄 `SubjectPicker.tsx`
-> FILEPATH: frontend/src/domains/meta_v2/features/governance/components/editor/logic/SubjectPicker.tsx */
+> Smart Context Selector. Strict TS bindings, avoids AntD click-interception, deep telemetry.
+
+| Attribute | Value |
+| :--- | :--- |
+| **security-level** | `LEVEL 9 (Data Access) */` |
+| **narrator** | `Emits explicit string paths for the Logic Compiler. */` |
 
 **Components & Logic:**
 
@@ -3098,12 +3102,8 @@
     * `⚡ LAZY LOAD: Global Domain List`
     * `⚡ LAZY LOAD: Specific Domain Schema`
     * `--- RENDERERS ---`
-    * `⚡ FIX: Use pure strings. Prevents AntD `rc-select` from intercepting clicks on internal spans!`
-    * `⚡ DYNAMIC CASCADER OPTIONS`
-    * `Cascader needs the exact final value at the leaf node`
-    * `⚡ TS FIX: Safely coerce label to String for filtering`
-    * `⚡ FIX: Reconstruct array path for Cascader (e.g., 'actor.id' -> ['actor', 'actor.id'])`
-    * `⚡ TS FIX: Narrow type explicitly for the Cascader array`
+    * `⚡ CRITICAL FIX: Convert from Components to standard Render Functions`
+    * `This stops the "Cannot create components during render" crash.`
 
 ---
 ## 📂 `frontend/src/domains/meta_v2/features/governance/components/list/`
@@ -3466,9 +3466,12 @@
 **Components & Logic:**
 
 * **`useCanvasHistory`**
+  * 📝 *⚡ CRITICAL FIX: Removed unused 'initialNodes' & 'initialEdges' to clear ESLint warnings*
   * **Logic Flow:**
     * `⚡ SNAPSHOT ENGINE`
     * `Limit history depth to 50`
+    * `⚡ CRITICAL FIX: Replaced invalid `useRef().current` access during render with `useMemo``
+    * `Clean up debounce on unmount to prevent memory leaks`
     * `⚡ UNDO`
     * `⚡ REDO`
 
