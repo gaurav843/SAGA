@@ -4,7 +4,7 @@
 // @description: Typed fetchers for System Internals.
 // FIXED: Corrected import path for config (3 levels up).
 
-import { SystemPulse } from '../types';
+import { type SystemPulse } from '../types';
 // ⚡ FIX: Corrected Path depth
 import { API_BASE_URL } from '../../../config'; 
 

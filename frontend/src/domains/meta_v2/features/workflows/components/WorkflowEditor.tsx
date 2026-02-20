@@ -2,20 +2,22 @@
 // @file: Workflow Editor Shell
 // @role: 🎨 UI Presentation / 🧠 Logic Container */
 // @author: The Engineer
-// @description: The Canvas and Inspector workspace. Legacy dependencies completely severed.
-// @security-level: LEVEL 9 (UI Safe) */
+// @description: The Canvas and Inspector workspace. Safely synthesizes missing Database definitions using Code Defaults.
+// @security-level: LEVEL 9 (Strict Null Checks & Memory Synthesis) */
 // @narrator: Deeply traces interactions with nodes and pane background. */
 
-import React, { useMemo, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import { Layout, theme, Spin, Alert, Button } from 'antd';
 
-import { logger } from '@/platform/logging/Narrator';
+import { logger } from "@/platform/logging/Narrator";
 import { useUrlState } from '@/platform/hooks/useUrlState';
+import { } from '@platform/logging/'
 
-// ⚡ LOCAL V2 IMPORTS (100% Decoupled)
-import { useWorkflows } from '../hooks/useWorkflows';
+// ⚡ LOCAL V2 IMPORTS
+import { useWorkflows, type WorkflowDefinition } from '../hooks/useWorkflows';
 import { useEditorSession } from '../hooks/useEditorSession';
-import { WORKFLOW_TYPES, WorkflowTypeDef } from '../constants';
+import { WORKFLOW_TYPES, type WorkflowTypeDef } from '../constants';
+import { useKernel } from '../../../_kernel/KernelContext';
 
 import { EditorToolbar } from './EditorToolbar';
 import { FlowCanvas } from './FlowCanvas';
@@ -32,6 +34,7 @@ interface WorkflowEditorProps {
 
 export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({ domain, scope, onBack }) => {
     const { token } = theme.useToken();
+    const { selectedDomain } = useKernel();
 
     // ⚡ DEEP LINKING BY DEFAULT
     const [nodeId, setNodeId] = useUrlState('node', '');
@@ -39,20 +42,68 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({ domain, scope, o
 
     const { workflows, isLoading, updateWorkflow, deleteWorkflow } = useWorkflows(domain);
 
-    const activeDefinition = useMemo(() => {
-        if (!workflows || !scope) return null;
-        return workflows.find((w: any) => (w.scope_key || w.scope) === scope) || null;
-    }, [workflows, scope]);
+    // ⚡ THE SYNTHESIS ENGINE (Fixes the "Process Definition Missing" bug for Jobs/Views)
+    const activeDefinition: WorkflowDefinition | null = useMemo(() => {
+        if (!scope) return null;
+        
+        // 1. Try to find it in the Database
+        if (workflows) {
+            const dbDef = workflows.find((w: WorkflowDefinition) => (w.scope_key || w.scope) === scope);
+            if (dbDef) return dbDef;
+        }
 
-    const activeTypeInfo: WorkflowTypeDef | null = useMemo(() => {
-        if (!activeDefinition && !scope) return null;
-        let typeKey = activeDefinition?.type || activeDefinition?.meta?.type || 'GOVERNANCE';
+        // 2. Fallback to Code Registry (Kernel Context) to Synthesize a Draft
+        const codeDef = selectedDomain?.scopes?.find(s => s.key === scope);
+        if (codeDef) {
+            logger.trace("WORKFLOW_EDITOR", `Synthesizing UI definition for code-first scope: ${scope}`);
+            
+            let nodeType = 'standard';
+            if (codeDef.type === 'WIZARD') nodeType = 'screen';
+            if (codeDef.type === 'JOB') nodeType = 'task';
+            if (codeDef.type === 'VIEW') nodeType = 'screen';
+
+            return {
+                id: `synthetic_${scope}`,
+                entity_key: domain,
+                scope: scope,
+                scope_key: scope,
+                name: codeDef.label || scope,
+                type: codeDef.type,
+                is_active: true,
+                is_latest: true,
+                governed_field: codeDef.target_field || 'status',
+                definition: {
+                    id: scope,
+                    initial: scope,
+                    states: {
+                        [scope]: {
+                            type: 'atomic',
+                            meta: {
+                                nodeType: nodeType,
+                                x: 250,
+                                y: 150,
+                                job_config: codeDef.config || {},
+                                form_schema: codeDef.config?.components ? [] : undefined, // Hack to support Views
+                                description: codeDef.config?.description || ''
+                            }
+                        }
+                    }
+                }
+            } as unknown as WorkflowDefinition;
+        }
+
+        return null;
+    }, [workflows, scope, selectedDomain]);
+
+    const activeTypeInfo: WorkflowTypeDef = useMemo(() => {
+        if (!activeDefinition && !scope) return WORKFLOW_TYPES[1]; 
+        const typeKey = activeDefinition?.type || (activeDefinition as any)?.meta?.type || 'GOVERNANCE';
         return WORKFLOW_TYPES.find(t => t.value === typeKey) || WORKFLOW_TYPES[1]; 
     }, [activeDefinition, scope]);
 
     const session = useEditorSession(domain, scope, activeDefinition);
 
-    // ⚡ REACTFLOW HANDLERS (TELEMETRY ENABLED)
+    // ⚡ REACTFLOW HANDLERS
     const handleNodeClick = (e: React.MouseEvent, node: any) => {
         logger.trace("WORKFLOW_EDITOR", `Node Focused: [${node.id}]`, { type: node.type });
         setNodeId(node.id);
@@ -87,7 +138,8 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({ domain, scope, o
     };
 
     const handleDelete = async () => {
-        if (activeDefinition?.id && deleteWorkflow) {
+        // Only attempt to delete if it's a real DB record (not a synthetic one)
+        if (activeDefinition?.id && typeof activeDefinition.id === 'number' && deleteWorkflow) {
             logger.tell("WORKFLOW_EDITOR", `🗑️ Executing delete for ID: ${activeDefinition.id}`);
             await deleteWorkflow(activeDefinition.id).then(() => onBack());
         }
@@ -119,8 +171,8 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({ domain, scope, o
     return (
         <Layout style={{ height: '100%', background: token.colorBgLayout }}>
             <EditorToolbar 
-                workflowName={activeDefinition.name || activeDefinition.label || scope}
-                version={activeDefinition.version || 1}
+                workflowName={activeDefinition?.name || activeDefinition?.label || scope}
+                version={activeDefinition?.version || 1}
                 mode={session.mode}
                 hasChanges={session.hasChanges}
                 isPublishing={false}
@@ -137,15 +189,15 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({ domain, scope, o
                     logger.trace("WORKFLOW_EDITOR", "User opened Raw JSON view", {});
                     setDrawerState('json');
                 }}
-                onDelete={handleDelete}
+                onDelete={typeof activeDefinition?.id === 'number' ? handleDelete : undefined}
                 onBack={onBack} 
             />
 
             <Layout>
                 <Content style={{ position: 'relative' }}>
                     <FlowCanvas 
-                        initialDefinition={session.draft || activeDefinition.transitions || activeDefinition.definition} 
-                        scopeType={activeTypeInfo?.value}
+                        initialDefinition={session.draft || activeDefinition?.transitions || activeDefinition?.definition} 
+                        scopeType={activeTypeInfo.value} 
                         onChange={session.actions.updateDraft}
                         readOnly={session.isReadOnly}
                         onNodeClick={handleNodeClick}
@@ -157,7 +209,7 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({ domain, scope, o
                     <Sider width={400} theme="light" style={{ borderLeft: `1px solid ${token.colorBorderSecondary}`, height: '100%', overflowY: 'auto' }}>
                         <WorkflowInspector 
                             domain={domain}
-                            workflowType={activeTypeInfo?.value || 'GOVERNANCE'}
+                            workflowType={activeTypeInfo.value || 'GOVERNANCE'}
                             activeMachine={activeDefinition}
                             selectedNodeId={nodeId}
                             readOnly={session.isReadOnly}
@@ -178,7 +230,7 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({ domain, scope, o
             <CodeEditorDrawer 
                 open={drawerState === 'json'} 
                 onClose={() => setDrawerState('')} 
-                definition={session.draft || activeDefinition.transitions || activeDefinition.definition}
+                definition={session.draft || activeDefinition?.transitions || activeDefinition?.definition}
                 readOnly={session.isReadOnly}
                 onApply={(newDef) => {
                     logger.trace("WORKFLOW_EDITOR", "Applied modifications via Raw JSON Editor");

@@ -8,7 +8,7 @@
 // 1. Re-export Constants (Preserves existing imports)
 export * from './constants';
 
-import { ScopeType } from './constants';
+import { type ScopeType } from './constants';
 
 // --- KERNEL PROPERTIES ---
 

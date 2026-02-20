@@ -15,6 +15,7 @@ import ReactFlow, {
     useNodesState, useEdgesState, Panel
 } from 'reactflow';
 import 'reactflow/dist/style.css';
+
 import { 
     ArrowLeftOutlined, PlusOutlined, ReloadOutlined, 
     PartitionOutlined, DeleteOutlined, SaveOutlined 
@@ -36,10 +37,13 @@ import { FlowCanvas } from './components/FlowCanvas';
 import { WorkflowGenesis } from './components/WorkflowGenesis'; // New Modal
 import { CodeEditorDrawer } from './components/CodeEditorDrawer';
 
-import { logger } from '@/platform/logging/Narrator';
-import { StateMachineDraft } from './types';
-// ⚡ FIX: Corrected import path from '../constants' to './constants' (Sibling)
-import { WORKFLOW_TYPES, WorkflowTypeDef } from './constants';
+// ⚡ CRITICAL FIX: Adjusted relative path depth (added one '../')
+import { logger } from '../../../../platform/logging/Narrator'; 
+
+// ⚡ CRITICAL FIX: Isolate Type Imports
+import type { StateMachineDraft } from './types';
+import type { WorkflowTypeDef } from './constants';
+import { WORKFLOW_TYPES } from './constants';
 
 const { Content, Sider } = Layout;
 const { Title, Text } = Typography;
@@ -411,4 +415,3 @@ export const StatesView: React.FC = () => {
         </Layout>
     );
 };
-

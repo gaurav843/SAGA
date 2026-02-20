@@ -14,7 +14,7 @@ import { RobotOutlined, FullscreenOutlined, FullscreenExitOutlined, CheckCircleO
 // Sub-Components
 import { ContextBrowser } from "./components/ContextBrowser";
 import { PromptInterface } from "./components/PromptInterface";
-import { useContextAssembler, CommandMode } from "./hooks/useContextAssembler";
+import { useContextAssembler, type CommandMode } from "./hooks/useContextAssembler";
 
 // Hooks - Domain Specific (Fallback for Connected Mode)
 import { useDomainSchema } from "../../../hooks/useDomainSchema"; 

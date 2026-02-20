@@ -9,7 +9,7 @@
 import React from 'react';
 import { Tree, Empty, Typography, theme, Tooltip, Button } from 'antd';
 import { useKernel } from '../_kernel/KernelContext';
-import { useDomainTree, KernelTreeNode } from './useDomainTree';
+import { useDomainTree, type KernelTreeNode } from './useDomainTree';
 import { IconFactory } from '../../../platform/ui/icons/IconFactory'; 
 import { useMetaUI } from '../_shell/MetaUIContext';
 import { logger } from '../../../platform/logging'; // ⚡ NEW

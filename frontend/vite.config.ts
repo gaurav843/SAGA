@@ -14,19 +14,11 @@ export default defineConfig({
     alias: {
       // ⚡ UNIVERSAL ROOT
       '@': path.resolve(__dirname, './src'),
-
-      // ⚡ ARCHITECTURE ALIASES
       '@platform': path.resolve(__dirname, './src/platform'),
       '@domains': path.resolve(__dirname, './src/domains'),
-      
-      // ⚡ KERNEL ALIASES (Restored)
-      '@kernel': path.resolve(__dirname, './src/_kernel'), // Legacy Core
-      '@meta-kernel': path.resolve(__dirname, './src/domains/meta/_kernel'), // New Fractal Core
-      
-      // ⚡ FEATURE ALIASES (Restored)
+      '@kernel': path.resolve(__dirname, './src/_kernel'),
+      '@meta-kernel': path.resolve(__dirname, './src/domains/meta/_kernel'),
       '@api': path.resolve(__dirname, './src/api'),
-      
-      // ⚡ UTILITY ALIASES (Restored)
       '@components': path.resolve(__dirname, './src/components'),
       '@assets': path.resolve(__dirname, './src/assets'),
     },

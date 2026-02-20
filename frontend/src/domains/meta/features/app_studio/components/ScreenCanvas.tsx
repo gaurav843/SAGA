@@ -10,7 +10,7 @@ import React from 'react';
 import { theme, Typography, Space, Tag } from 'antd';
 import { useDroppable } from '@dnd-kit/core';
 import { HolderOutlined } from '@ant-design/icons';
-import { ActiveApp } from '../types';
+import { type ActiveApp } from '../types';
 import { IconFactory } from './IconFactory';
 
 const { Text } = Typography;

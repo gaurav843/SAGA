@@ -15,7 +15,9 @@ import {
 
 import { IconFactory } from '../../../platform/ui/icons/IconFactory';
 import { logger } from '../../../platform/logging';
-import { DomainSummary } from '../types';
+
+// ⚡ CRITICAL FIX: Import as type to prevent Vite/ESBuild transpilation crashes
+import type { DomainSummary } from '../types'; 
 
 const { Text, Title, Paragraph } = Typography;
 
@@ -174,4 +176,3 @@ export const DomainTree: React.FC<DomainTreeProps> = ({ domains, onSelect, isLoa
         </div>
     );
 };
-

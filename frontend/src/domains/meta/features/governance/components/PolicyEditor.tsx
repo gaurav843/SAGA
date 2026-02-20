@@ -17,7 +17,7 @@ import {
 } from '@ant-design/icons';
 
 import { useGovernance } from '../hooks/useGovernance';
-import { PolicyDraft, Rule, Consequence } from '../types';
+import { type PolicyDraft, type Rule, type Consequence } from '../types';
 import { LogicBuilder } from './editor/LogicBuilder';
 import { TestPanel } from './editor/TestPanel';
 import { HistoryDrawer } from './editor/HistoryDrawer';

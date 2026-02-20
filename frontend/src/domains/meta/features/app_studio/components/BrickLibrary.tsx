@@ -8,7 +8,7 @@
 // @updated: Fixed missing 'Space' import to prevent ReferenceError. */
 
 import React, { useState, useMemo } from 'react';
-import { Input, Collapse, Empty, theme, Typography, Dropdown, MenuProps, Tag, Space } from 'antd';
+import { Input, Collapse, Empty, theme, Typography, Dropdown, type MenuProps, Tag, Space } from 'antd';
 import { 
     SearchOutlined, 
     AppstoreOutlined, 
@@ -20,7 +20,7 @@ import {
 
 import { useAppStudio } from '../hooks/useAppStudio';
 import { DraggableBrick } from './DraggableBrick';
-import { SystemBrick } from '../types';
+import { type SystemBrick } from '../types';
 
 const { Panel } = Collapse;
 const { Text } = Typography;

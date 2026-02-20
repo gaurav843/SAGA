@@ -10,7 +10,7 @@ import React, { useMemo } from 'react';
 import { Typography, theme, Empty, Tree, Tag, Input, Button } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { useKernel } from '../_kernel/KernelContext';
-import { useTopology, TopologyItem, TopologySection, TopologyDomain, DomainCluster } from './useTopology';
+import { useTopology, type TopologyItem, TopologySection, TopologyDomain, DomainCluster } from './useTopology';
 import { useMetaUI } from '../_shell/MetaUIContext';
 import { IconFactory } from '@/platform/ui/icons/IconFactory';
 import { logger } from '@/platform/logging/Narrator';

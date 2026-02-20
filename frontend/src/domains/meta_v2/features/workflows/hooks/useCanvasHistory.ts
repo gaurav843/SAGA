@@ -5,7 +5,7 @@
 // @description: Provides Undo/Redo capability for ReactFlow with debounced snapshots.
 // @security-level: LEVEL 9 */
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import type { Node, Edge } from 'reactflow';
 import debounce from 'lodash/debounce'; 
 import { logger } from '@/platform/logging';
@@ -15,7 +15,8 @@ interface HistorySnapshot {
     edges: Edge[];
 }
 
-export const useCanvasHistory = (initialNodes: Node[], initialEdges: Edge[]) => {
+// ⚡ CRITICAL FIX: Removed unused 'initialNodes' & 'initialEdges' to clear ESLint warnings
+export const useCanvasHistory = () => {
     const [past, setPast] = useState<HistorySnapshot[]>([]);
     const [future, setFuture] = useState<HistorySnapshot[]>([]);
     
@@ -30,12 +31,21 @@ export const useCanvasHistory = (initialNodes: Node[], initialEdges: Edge[]) => 
         setFuture([]); // New action clears future
     }, []);
 
-    const debouncedSnapshot = useRef(
-        debounce((nodes: Node[], edges: Edge[]) => {
+    // ⚡ CRITICAL FIX: Replaced invalid `useRef().current` access during render with `useMemo`
+    const debouncedSnapshot = useMemo(
+        () => debounce((nodes: Node[], edges: Edge[]) => {
             logger.trace("CANVAS", "History snapshot captured (Debounced)");
             takeSnapshot(nodes, edges);
-        }, 500)
-    ).current;
+        }, 500),
+        [takeSnapshot]
+    );
+
+    // Clean up debounce on unmount to prevent memory leaks
+    useEffect(() => {
+        return () => {
+            debouncedSnapshot.cancel();
+        };
+    }, [debouncedSnapshot]);
 
     // ⚡ UNDO
     const undo = useCallback((currentNodes: Node[], currentEdges: Edge[]) => {
@@ -75,4 +85,3 @@ export const useCanvasHistory = (initialNodes: Node[], initialEdges: Edge[]) => 
         historyDepth: past.length
     };
 };
-

@@ -4,7 +4,7 @@
 // @description: Contracts for Policy Management and Logic Building.
 // @security-level: LEVEL 9 (Type Safety) */
 
-import { PolicyResolutionStrategy, RuleActionType, RuleEventType } from "../../../types/constants";
+import { PolicyResolutionStrategy, type RuleActionType, RuleEventType } from "../../../types/constants";
 
 // --- CONSEQUENCES (The Verdicts) ---
 export interface Consequence {

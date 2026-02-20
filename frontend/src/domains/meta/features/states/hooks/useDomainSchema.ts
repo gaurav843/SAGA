@@ -9,7 +9,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { MetaKernelService } from '@/api';
 import { logger } from '@/platform/logging';
-import { SchemaField } from '@/domains/meta/features/governance/types';
+
+// ⚡ CRITICAL FIX: Added 'type' keyword to prevent Vite transpilation crash
+import type { SchemaField } from '@/domains/meta/features/governance/types';
 
 // ⚡ SYSTEM FIELDS (Fallback)
 const SYSTEM_FIELDS: SchemaField[] = [
@@ -91,4 +93,3 @@ export const useDomainSchema = (domain: string) => {
         error
     };
 };
-

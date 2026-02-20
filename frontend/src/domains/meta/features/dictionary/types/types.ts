@@ -3,7 +3,7 @@
 /* @author The Engineer */
 /* @description Types that DISAPPEAR at runtime. Pure Interfaces. */
 
-import { AttributeType, WidgetType } from './constants';
+import { type AttributeType, type WidgetType } from './constants';
 
 export interface SelectOption {
   label: string;

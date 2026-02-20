@@ -6,7 +6,7 @@
 // @security-level: LEVEL 9 (Logic Safe) */
 // @updated: Removed 'SYS' magic string. Now uses strict type checking. */
 
-import { DomainSummary, ActiveContext, KernelCapabilities } from './types';
+import { type DomainSummary, type ActiveContext, type KernelCapabilities } from './types';
 
 /**
  * @description Decodes the Domain Properties into UI Capabilities.

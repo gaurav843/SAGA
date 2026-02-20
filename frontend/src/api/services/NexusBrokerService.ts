@@ -1,7 +1,7 @@
 /* generated using openapi-typescript-codegen -- do not edit */
 /* istanbul ignore file */
 /* tslint:disable */
-/* eslint-disable */
+ 
 import type { DataCircuitCreate } from '../models/DataCircuitCreate';
 import type { DataCircuitRead } from '../models/DataCircuitRead';
 import type { DataCircuitUpdate } from '../models/DataCircuitUpdate';

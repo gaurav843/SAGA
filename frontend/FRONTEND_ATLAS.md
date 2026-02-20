@@ -1,5 +1,5 @@
 # 🗺️ FLODOCK SYSTEM ATLAS (Prism V10)
-**Generated:** 2026-02-20 11:36
+**Generated:** 2026-02-20 13:37
 **Mode:** Total Recall (Full Comment Extraction).
 
 ---
@@ -706,6 +706,7 @@
 * **`MetaProvider`**
   * **Logic Flow:**
     * `1. DATA: Fetch Topology (Domains -> Scopes)`
+    * `⚡ API FIX: Match the exact generated OpenAPI SDK method name`
     * `2. STATE: Universal URL Persistence`
     * `3. DERIVED STATE: Resolve Objects from Keys`
     * `4. ACTIONS (The Interface Implementation)`
@@ -756,7 +757,7 @@
 ## 📂 `frontend/src/domains/meta/_shell/`
 
 ### 📄 `MetaLayout.tsx`
-> FILEPATH: frontend/src/domains/meta/_shell/MetaLayout.tsx */
+> The structural frame for the System Configuration module.
 
 **Components & Logic:**
 
@@ -766,17 +767,21 @@
 ### 📄 `MetaRoot.tsx`
 > Provides the MetaContext and persistent Layout Shell for the Meta Kernel.
 
+| Attribute | Value |
+| :--- | :--- |
+| **security-level** | `LEVEL 0 */` |
+
 **Components & Logic:**
 
 * **`MetaRoot`**
 
 ---
-### 📄 `MetaSidebar.tsx`
+### 🖥️ `MetaSidebar.tsx`
 > High-density navigation for the System Configuration module.
 
 | Attribute | Value |
 | :--- | :--- |
-| **updated** | `Added 'Cortex Studio' link. */` |
+| **security-level** | `LEVEL 5 (Presentation) */` |
 
 **Components & Logic:**
 
@@ -785,11 +790,6 @@
     * `⚡ PERSISTENCE`
     * `⚡ SYSTEM LINK`
     * `⚡ THE APP STORE`
-    * `Import for Studio icon was missing in previous file provided, adding generic import if needed,`
-    * `but sticking to icons available in imports above.`
-    * `Wait, I missed AppstoreAddOutlined in the imports list above.`
-    * `I will add it to the imports to be safe.`
-    * `⚡ RE-ADDING MISSING ICON IMPORT MANUALLY TO ENSURE SAFETY`
 
 ---
 ## 📂 `frontend/src/domains/meta/components/`
@@ -3230,27 +3230,34 @@
 
 ---
 ### 📄 `WorkflowEditor.tsx`
-> The Canvas and Inspector workspace. Legacy dependencies completely severed.
+> The Canvas and Inspector workspace. Safely synthesizes missing Database definitions using Code Defaults.
 
 | Attribute | Value |
 | :--- | :--- |
-| **security-level** | `LEVEL 9 (UI Safe) */` |
+| **security-level** | `LEVEL 9 (Strict Null Checks & Memory Synthesis) */` |
+| **narrator** | `Deeply traces interactions with nodes and pane background. */` |
 
 **Components & Logic:**
 
 * **`WorkflowEditor`**
   * **Logic Flow:**
     * `⚡ DEEP LINKING BY DEFAULT`
+    * `⚡ THE SYNTHESIS ENGINE (Fixes the "Process Definition Missing" bug for Jobs/Views)`
+    * `1. Try to find it in the Database`
+    * `2. Fallback to Code Registry (Kernel Context) to Synthesize a Draft`
     * `⚡ REACTFLOW HANDLERS`
     * `⚡ API MUTATION HANDLERS`
+    * `Only attempt to delete if it's a real DB record (not a synthetic one)`
 
 ---
 ### 📄 `WorkflowExplorer.tsx`
-> Renders a filterable gallery of workflows. Now strictly uses V2 imports.
+> Renders a filterable gallery of workflows. Now correctly includes JOB and VIEW scopes.
 
 | Attribute | Value |
 | :--- | :--- |
-| **security-level** | `LEVEL 9 (UI Safe) */` |
+| **security-level** | `LEVEL 9 (Strict TypeScript) */` |
+| **invariant** | `MUST support code-first scopes that do not yet exist in the DB. */` |
+| **narrator** | `Emits traces for all list calculations and segment filters. */` |
 
 **Components & Logic:**
 
@@ -3259,9 +3266,11 @@
     * `⚡ CONTEXT`
     * `⚡ DEEP LINKING BY DEFAULT`
     * `⚡ DATA FETCH`
-    * `⚡ LOGIC: Filter Workflows`
+    * `⚡ LOGIC: Robust Union & Strict Filter`
+    * `1. Gather ALL code-first scopes from the Registry (No longer hiding JOB/VIEW)`
+    * `2. Add/Merge db-first workflows`
+    * `3. Convert to array and apply user's UI filter`
     * `⚡ HANDLERS`
-    * `⚡ SAFE RETURN: Loading State`
 
 ---
 ### 📄 `WorkflowGenesis.tsx`

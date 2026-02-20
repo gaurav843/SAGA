@@ -3,15 +3,16 @@
 // @role: 🧠 Logic Container */
 // @author: The Engineer
 // @description: Manages Policy State and Fuses Domain Schema with System Context.
-// @security-level: LEVEL 9 (Schema Fusion)
-// @updated: Aligned API calls with generated OpenAPI SDK. Preserved Delete logic.
-
+// @security-level: LEVEL 9 (Schema Fusion) */
+// @updated: Aligned API calls with generated OpenAPI SDK. Preserved Delete logic. */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { App } from 'antd';
 import { MetaKernelService } from '@/api';
 import { logger } from '@/platform/logging';
-import { 
+
+// ⚡ CRITICAL FIX: Add 'type' keyword to prevent Vite transpilation crashes
+import type { 
     Policy, 
     PolicyDraft, 
     DryRunRequest, 
@@ -143,4 +144,3 @@ export const useGovernance = (domain: string) => {
         isSimulating: dryRunMutation.isPending
     };
 };
-

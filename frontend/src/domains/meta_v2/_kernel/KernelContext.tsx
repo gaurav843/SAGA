@@ -10,7 +10,7 @@ import { useUrlState } from '../../../platform/hooks/useUrlState';
 import { logger } from '../../../platform/logging';
 import { OpenAPI } from '../../../api/core/OpenAPI';
 import { request } from '../../../api/core/request'; // ⚡ GENERIC REQUEST FOR V3 BRIDGE
-import { MetaContextState, DomainSummary, ScopeSummary, WorkflowTypeRead } from './types';
+import { type MetaContextState, type DomainSummary, type ScopeSummary, type WorkflowTypeRead } from './types';
 import { buildActiveContext } from './logic';
 
 // 1. INITIAL STATE

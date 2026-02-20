@@ -1,3 +1,9 @@
+/* FILEPATH: frontend/eslint.config.js */
+/* @file: ESLint Flat Config */
+/* @role: ⚙️ Build Tooling */
+/* @author: The Engineer */
+/* @description: Linter configuration. Injected strict type-import rule for Vite compatibility. */
+
 import js from '@eslint/js'
 import globals from 'globals'
 import reactHooks from 'eslint-plugin-react-hooks'
@@ -19,5 +25,12 @@ export default defineConfig([
       ecmaVersion: 2020,
       globals: globals.browser,
     },
+    // ⚡ THE KERNEL FIX: Enforce isolatedModules safety globally
+    rules: {
+      '@typescript-eslint/consistent-type-imports': ['error', {
+        prefer: 'type-imports',
+        fixStyle: 'inline-type-imports'
+      }]
+    }
   },
 ])

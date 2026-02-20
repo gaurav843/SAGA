@@ -1,3 +1,4 @@
+// 
 // FILEPATH: frontend/src/domains/meta/features/dictionary/DictionaryView.tsx
 // @file: Dictionary View (Master Schema Editor)
 // @role: 🎨 UI Presentation */
@@ -29,9 +30,14 @@ import { useDomains } from '../../features/states/hooks/useDomains';
 import { AttributeExplorer } from './components/AttributeExplorer';
 import { AttributeEditor } from './components/AttributeEditor';
 import { useDictionary } from './hooks/useDictionary';
-import { AttributeDraft } from './types/types'; 
-import { AttributeType, WidgetType } from './types/constants'; // Explicit Import for Defaults
-import { logger } from '@/platform/logging/Narrator';
+
+// ⚡ CRITICAL FIX: Explicit type import to prevent Vite transpilation crash
+import type { AttributeDraft } from './types/types'; 
+
+import { AttributeType, WidgetType } from './types/constants'; // Explicit Import for Defaults (Enums exist at runtime)
+
+// ⚡ CRITICAL FIX: Adjusted relative path depth (added one '../')
+import { logger } from '../../../../platform/logging/Narrator'; 
 
 const { Content, Sider } = Layout;
 const { Title } = Typography;
@@ -79,6 +85,7 @@ export const DictionaryView: React.FC = () => {
 
     // 2. FEATURE LOGIC
     const activeDomain = selectedDomain?.key || null;
+
     const { 
         attributes, 
         isLoading: isSchemaLoading, 
@@ -169,11 +176,11 @@ export const DictionaryView: React.FC = () => {
             <div style={{ padding: 48, minHeight: '100%', background: token.colorBgLayout }}>
                 {isDomainsLoading ? (
                     <div style={{ textAlign: 'center', marginTop: 100 }}>
-                        <Spin size="large" tip="Loading System Topology..." />
+                         <Spin size="large" tip="Loading System Topology..." />
                     </div>
                 ) : (
                     <DomainTree 
-                        domains={domains} 
+                         domains={domains} 
                         onSelect={handleDomainSelect} 
                         isLoading={isDomainsLoading} 
                     />
@@ -269,17 +276,14 @@ export const DictionaryView: React.FC = () => {
                                 <AttributeEditor 
                                     // ⚡ KEY FIX: Force remount when switching items to reset form state
                                     key={selectedItem || 'new'} 
-                                    
                                     draft={activeDraft}
                                     
                                     // ⚡ CRITICAL: Pass Mode Signal to Unlock Fields
                                     isNew={isNewMode}
-                                    
                                     onSave={handleSave}
-                                    
+
                                     // ⚡ SECURITY FIX: Disable delete for System Fields or New Items
                                     onDelete={(!isCreating && !isSystemField) ? () => handleDelete(selectedItem!) : undefined}
-                                    
                                     isSaving={false} 
                                 />
                             </div>
@@ -299,4 +303,3 @@ export const DictionaryView: React.FC = () => {
         </Layout>
     );
 };
-

@@ -12,7 +12,7 @@ import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 
 import { IconFactory } from './IconFactory';
-import { SystemBrick } from '../types';
+import { type SystemBrick } from '../types';
 
 interface DraggableBrickProps {
   brick: SystemBrick;

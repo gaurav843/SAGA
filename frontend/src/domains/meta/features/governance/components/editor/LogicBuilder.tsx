@@ -11,7 +11,7 @@ import {
 } from '@ant-design/icons';
 
 import { logger } from '@/platform/logging/Narrator';
-import { SchemaField } from '@/domains/meta/features/governance/types';
+import { type SchemaField } from '@/domains/meta/features/governance/types';
 import { SubjectPicker } from './logic/SubjectPicker';
 
 const { Text } = Typography;

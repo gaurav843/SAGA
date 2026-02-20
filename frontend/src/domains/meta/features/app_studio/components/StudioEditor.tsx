@@ -7,7 +7,7 @@
 // @narrator: 🕵️ TELEMETRY + VERSIONING ENABLED */
 
 import React, { useState, useEffect } from 'react';
-import { Layout, Button, Drawer, Space, Typography, theme, Dropdown, MenuProps, Modal, Input, Badge } from 'antd';
+import { Layout, Button, Drawer, Space, Typography, theme, Dropdown, type MenuProps, Modal, Input, Badge } from 'antd';
 import { 
   SaveOutlined, 
   PlayCircleOutlined, 
@@ -21,8 +21,8 @@ import {
 import { 
     DndContext, 
     DragOverlay, 
-    DragEndEvent, 
-    DragStartEvent, 
+    type DragEndEvent, 
+    type DragStartEvent, 
     useSensor, 
     useSensors, 
     MouseSensor, 
@@ -35,8 +35,8 @@ import { AppConfigurator } from './AppConfigurator';
 import { DraggableBrick } from './DraggableBrick';
 import { logger } from '../../../../../platform/logging';
 import { useNotification } from '../../../../../platform/design/system/useNotification';
-import { SystemBrick, ActiveApp, Screen } from '../types';
-import { RuntimeLayout } from '../../../../workspace/types';
+import { type SystemBrick, type ActiveApp, type Screen } from '../types';
+import { type RuntimeLayout } from '../../../../workspace/types';
 
 const { Header, Sider, Content } = Layout;
 const { Title, Text } = Typography;

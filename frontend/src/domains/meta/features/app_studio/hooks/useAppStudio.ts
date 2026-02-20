@@ -12,7 +12,7 @@ import { useNavigate } from 'react-router-dom';
 import { useBricks } from '../../../../workspace/hooks/useBricks';
 import { OpenAPI } from '../../../../../api/core/OpenAPI';
 import { logger } from '../../../../../platform/logging';
-import { Screen } from '../types';
+import { type Screen } from '../types';
 
 // ⚡ PLATFORM UTILS
 import { useNotification } from '../../../../../platform/design/system/useNotification';

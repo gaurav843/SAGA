@@ -8,7 +8,7 @@
 
 import React, { useEffect, useMemo } from 'react';
 import { Form, Input, Select, Button, Typography, Divider, Tag, Empty, Alert, Tabs, Checkbox, TreeSelect } from 'antd';
-import { ActiveApp } from '../types';
+import { type ActiveApp } from '../types';
 import { IconPicker } from './IconPicker';
 import { DeleteOutlined, SaveOutlined, InfoCircleOutlined, LockOutlined, SettingOutlined, FolderOpenOutlined } from '@ant-design/icons';
 

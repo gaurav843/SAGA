@@ -50,7 +50,7 @@ export const WorkflowGenesis: React.FC<WorkflowGenesisProps> = ({ open, onClose,
     const handleCreate = async (values: any) => {
         setIsSubmitting(true);
         try {
-            logger.whisper("WORKFLOWS", "Initializing new workflow definition");
+            logger.whisper("WORKFLOW", "Initializing new workflow definition");
 
             const payload = {
                 domain: domainKey,
@@ -73,10 +73,10 @@ export const WorkflowGenesis: React.FC<WorkflowGenesisProps> = ({ open, onClose,
             // V2 uses 'updateWorkflow' (which runs POST) for creation
             await updateWorkflow(payload);
             
-            logger.tell("WORKFLOWS", `✅ Created new workflow: ${values.scope_key}`);
+            logger.tell("WORKFLOW", `✅ Created new workflow: ${values.scope_key}`);
             onSuccess?.(values.scope_key);
         } catch (error) {
-            logger.scream("WORKFLOWS", "Failed to create workflow", error);
+            logger.scream("WORKFLOW", "Failed to create workflow", error);
         } finally {
             setIsSubmitting(false);
         }

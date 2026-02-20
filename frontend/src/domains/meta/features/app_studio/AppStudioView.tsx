@@ -6,7 +6,7 @@
 // @security-level: LEVEL 9 (Deep Linking) */
 
 import React, { useState, useMemo } from 'react';
-import { DragEndEvent } from '@dnd-kit/core';
+import { type DragEndEvent } from '@dnd-kit/core';
 import { useUrlState } from '../../../../platform/hooks/useUrlState';
 import { logger } from '../../../../platform/logging';
 
@@ -15,7 +15,7 @@ import { AppStudioLobby } from './components/AppStudioLobby';
 import { CreateAppModal } from './components/CreateAppModal';
 import { StudioEditor } from './components/StudioEditor';
 import { useAppStudio } from './hooks/useAppStudio';
-import { SystemBrick } from './types';
+import { type SystemBrick } from './types';
 
 // ⚡ DATA LAYER
 import { useWorkspace } from '../../../workspace/hooks/useWorkspace';

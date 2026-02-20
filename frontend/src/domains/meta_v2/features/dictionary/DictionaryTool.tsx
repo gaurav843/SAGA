@@ -16,7 +16,7 @@ import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
 import { useDictionary } from './hooks/useDictionary';
 import { AttributeExplorer } from './components/AttributeExplorer';
 import { AttributeEditor } from './components/AttributeEditor';
-import { AttributeDraft } from './types/types'; 
+import { type AttributeDraft } from './types/types'; 
 import { AttributeType, WidgetType } from './types/constants';
 
 import { logger } from '@/platform/logging';

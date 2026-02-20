@@ -6,7 +6,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { SystemAPI } from '../api';
-import { SystemPulse } from '../types';
+import { type SystemPulse } from '../types';
 // ⚡ FIX: Corrected Path depth
 import { logger } from '../../../platform/logging'; 
 

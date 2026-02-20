@@ -7,7 +7,7 @@
 // @invariant: Must match 'backend/app/domains/workspace/schemas.py' contracts. */
 // @updated: Added 'meta' field to RuntimeLayout to support Versioning. */
 
-import { ScopeType } from "../meta/types/constants";
+import { type ScopeType } from "../meta/types/constants";
 
 // --- 1. THE BRICK ---
 export interface BrickType {

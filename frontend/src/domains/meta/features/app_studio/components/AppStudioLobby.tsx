@@ -15,7 +15,7 @@ import {
     DeleteOutlined 
 } from '@ant-design/icons';
 
-import { Screen } from '../types';
+import { type Screen } from '../types';
 import { IconFactory } from './IconFactory';
 
 const { Title, Text, Paragraph } = Typography;

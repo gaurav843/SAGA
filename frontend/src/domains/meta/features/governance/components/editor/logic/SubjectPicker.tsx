@@ -14,7 +14,7 @@ import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 
 import { API_BASE_URL } from '@/config';
-import { SchemaField } from '@/domains/meta/features/governance/types';
+import { type SchemaField } from '@/domains/meta/features/governance/types';
 
 const { Text } = Typography;
 

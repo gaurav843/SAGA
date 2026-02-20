@@ -11,8 +11,8 @@ import { logger } from '../../../platform/logging/Narrator';
 import { MetaKernelService } from '../../../api/services/MetaKernelService';
 import { useQuery } from '@tanstack/react-query';
 
-// ⚡ IMPORT SHARED CONTRACTS
-import { 
+// ⚡ CRITICAL FIX: IMPORT SHARED CONTRACTS AS TYPES ONLY
+import type { 
     MetaContextState, 
     DomainSummary, 
     ScopeSummary 
@@ -46,9 +46,13 @@ export const MetaProvider: React.FC<{ children: React.ReactNode }> = ({ children
         queryKey: ['meta', 'domains'],
         queryFn: async () => {
             logger.tell("META", "📡 Fetching System Topology...");
-            const response = await MetaKernelService.listDomains();
+            // ⚡ API FIX: Match the exact generated OpenAPI SDK method name
+            const response = await MetaKernelService.listDomainsApiV1MetaDomainsGet();
+            
             // @ts-ignore - Handle Manifest Wrapper if present
-            return (response.modules || response) as DomainSummary[]; 
+            const domains = (response.modules || response) as DomainSummary[]; 
+            logger.trace("META", "Topology Fetched", { count: domains?.length });
+            return domains;
         },
         staleTime: 1000 * 60 * 5, 
     });
@@ -66,7 +70,7 @@ export const MetaProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const selectedScope = useMemo(() => {
         if (!selectedDomain || !scopeKey) return null;
-        return selectedDomain.scopes.find(s => s.key === scopeKey) || null;
+        return selectedDomain.scopes?.find(s => s.key === scopeKey) || null;
     }, [selectedDomain, scopeKey]);
 
     // 4. ACTIONS (The Interface Implementation)
@@ -95,9 +99,15 @@ export const MetaProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // 5. SIDE EFFECTS
     useEffect(() => {
         if (rawDomains.length > 0) {
-            logger.tell("META", `📥 Loaded ${rawDomains.length} Domains`);
+            logger.whisper("META", `📥 Loaded ${rawDomains.length} Domains into Context`);
         }
     }, [rawDomains.length]);
+
+    useEffect(() => {
+        if (error) {
+            logger.scream("META", "🔥 Failed to fetch topology", error);
+        }
+    }, [error]);
 
     // 6. CONSTRUCT CONTEXT
     const value: MetaContextState = {
@@ -127,4 +137,3 @@ export const useMetaContext = () => {
     }
     return context;
 };
-

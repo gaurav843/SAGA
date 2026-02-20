@@ -1,7 +1,7 @@
 /* generated using openapi-typescript-codegen -- do not edit */
 /* istanbul ignore file */
 /* tslint:disable */
-/* eslint-disable */
+ 
 import type { AttributeConfig } from './AttributeConfig';
 import type { WidgetType } from './WidgetType';
 export type AttributeUpdate = {
