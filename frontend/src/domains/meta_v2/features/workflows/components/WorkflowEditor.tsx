@@ -4,6 +4,7 @@
 // @author: The Engineer
 // @description: The Canvas and Inspector workspace. Legacy dependencies completely severed.
 // @security-level: LEVEL 9 (UI Safe) */
+// @narrator: Deeply traces interactions with nodes and pane background. */
 
 import React, { useMemo, useEffect } from 'react';
 import { Layout, theme, Spin, Alert, Button } from 'antd';
@@ -14,7 +15,7 @@ import { useUrlState } from '@/platform/hooks/useUrlState';
 // ⚡ LOCAL V2 IMPORTS (100% Decoupled)
 import { useWorkflows } from '../hooks/useWorkflows';
 import { useEditorSession } from '../hooks/useEditorSession';
-import { WORKFLOW_TYPES, WorkflowTypeDef } from '../constants'; // ⚡ THE CORD IS PERMANENTLY CUT
+import { WORKFLOW_TYPES, WorkflowTypeDef } from '../constants';
 
 import { EditorToolbar } from './EditorToolbar';
 import { FlowCanvas } from './FlowCanvas';
@@ -51,22 +52,22 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({ domain, scope, o
 
     const session = useEditorSession(domain, scope, activeDefinition);
 
-    // ⚡ REACTFLOW HANDLERS
+    // ⚡ REACTFLOW HANDLERS (TELEMETRY ENABLED)
     const handleNodeClick = (e: React.MouseEvent, node: any) => {
-        logger.tell("WORKFLOWS", `👇 Canvas Node Selected: ${node.id}`);
+        logger.trace("WORKFLOW_EDITOR", `Node Focused: [${node.id}]`, { type: node.type });
         setNodeId(node.id);
     };
 
     const handlePaneClick = () => {
         if (nodeId) {
-            logger.trace("WORKFLOWS", "Canvas pane clicked, clearing selection");
+            logger.trace("WORKFLOW_EDITOR", "Canvas pane clicked, clearing node selection", {});
             setNodeId('');
         }
     };
 
     // ⚡ API MUTATION HANDLERS
     const handleSave = async () => {
-        logger.tell("WORKFLOWS", `💾 Saving Workflow Draft: ${scope}`);
+        logger.trace("WORKFLOW_EDITOR", `Initiating save for [${scope}]`, { hasChanges: session.hasChanges });
         
         if (updateWorkflow && session.draft && activeDefinition) {
             const payload = {
@@ -79,14 +80,15 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({ domain, scope, o
             
             await updateWorkflow(payload);
             session.actions.publishDraft();
+            logger.tell("WORKFLOW_EDITOR", `✅ Successfully published [${scope}]`);
         } else {
-            logger.scream("WORKFLOWS", "Missing required state to save workflow");
+            logger.scream("WORKFLOW_EDITOR", "Missing required state to save workflow");
         }
     };
 
     const handleDelete = async () => {
         if (activeDefinition?.id && deleteWorkflow) {
-            logger.scream("WORKFLOWS", `🗑️ Executing delete for ID: ${activeDefinition.id}`);
+            logger.tell("WORKFLOW_EDITOR", `🗑️ Executing delete for ID: ${activeDefinition.id}`);
             await deleteWorkflow(activeDefinition.id).then(() => onBack());
         }
     };
@@ -100,6 +102,7 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({ domain, scope, o
     }
 
     if (!activeDefinition && !isLoading) {
+        logger.trace("WORKFLOW_EDITOR", `Definition missing for scope: ${scope}. Halting render.`);
         return (
             <div style={{ padding: 24 }}>
                 <Alert 
@@ -121,12 +124,21 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({ domain, scope, o
                 mode={session.mode}
                 hasChanges={session.hasChanges}
                 isPublishing={false}
-                onEdit={session.actions.enterEditMode}
-                onDiscard={session.actions.discardChanges}
+                onEdit={() => {
+                    logger.trace("WORKFLOW_EDITOR", "User initiated Edit Mode", {});
+                    session.actions.enterEditMode();
+                }}
+                onDiscard={() => {
+                    logger.trace("WORKFLOW_EDITOR", "User discarded changes", {});
+                    session.actions.discardChanges();
+                }}
                 onPublish={handleSave}
-                onViewJson={() => setDrawerState('json')}
+                onViewJson={() => {
+                    logger.trace("WORKFLOW_EDITOR", "User opened Raw JSON view", {});
+                    setDrawerState('json');
+                }}
                 onDelete={handleDelete}
-                onBack={onBack} // ⚡ RESTORED: Back handler mapped securely
+                onBack={onBack} 
             />
 
             <Layout>
@@ -151,6 +163,7 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({ domain, scope, o
                             readOnly={session.isReadOnly}
                             onUpdate={(nodeData) => {
                                 if (session.draft) {
+                                    logger.trace("WORKFLOW_EDITOR", `Applying updates to Node [${nodeId}]`);
                                     const newDraft = JSON.parse(JSON.stringify(session.draft));
                                     newDraft.states[nodeId] = nodeData;
                                     session.actions.updateDraft(newDraft);
@@ -168,6 +181,7 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({ domain, scope, o
                 definition={session.draft || activeDefinition.transitions || activeDefinition.definition}
                 readOnly={session.isReadOnly}
                 onApply={(newDef) => {
+                    logger.trace("WORKFLOW_EDITOR", "Applied modifications via Raw JSON Editor");
                     session.actions.updateDraft(newDef);
                     setDrawerState('');
                 }}
@@ -175,4 +189,3 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({ domain, scope, o
         </Layout>
     );
 };
-

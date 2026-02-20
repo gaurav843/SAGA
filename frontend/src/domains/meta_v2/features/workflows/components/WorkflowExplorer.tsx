@@ -2,8 +2,10 @@
 // @file: Workflow Explorer (The Lobby)
 // @role: 🎨 UI Presentation / 🧠 Logic Container */
 // @author: The Engineer
-// @description: Renders a filterable gallery of workflows. Now strictly uses V2 imports.
+// @description: Renders a filterable gallery of workflows. Hides non-graph scopes (JOB/VIEW).
 // @security-level: LEVEL 9 (UI Safe) */
+// @invariant: MUST filter out 'JOB' and 'VIEW' scopes as they lack XState engines. */
+// @narrator: Emits traces for all list calculations and segment filters. */
 
 import React, { useMemo, useEffect } from 'react';
 import { Typography, theme, Button, Space, Spin, Empty, Tag, Segmented } from 'antd';
@@ -13,7 +15,7 @@ import { useNavigate } from 'react-router-dom';
 import { logger } from '@/platform/logging/Narrator';
 import { useUrlState } from '@/platform/hooks/useUrlState';
 
-// ⚡ LOCAL V2 IMPORTS (Cord Severed completely)
+// ⚡ LOCAL V2 IMPORTS
 import { useWorkflows } from '../hooks/useWorkflows';
 import { WorkflowGenesis } from './WorkflowGenesis'; 
 import { useKernel } from '../../../_kernel/KernelContext';
@@ -39,27 +41,55 @@ export const WorkflowExplorer: React.FC<WorkflowExplorerProps> = ({ domain }) =>
     const { workflows, isLoading, refreshWorkflows } = useWorkflows(domain);
 
     useEffect(() => {
-        logger.whisper("WORKFLOWS", `Entering Workflow Lobby for Domain: ${domain}`);
+        logger.whisper("WORKFLOW_EXPLORER", `Entering Workflow Lobby for Domain: ${domain}`);
     }, [domain]);
 
-    // ⚡ LOGIC: Filter Workflows
+    // ⚡ LOGIC: Robust Union & Strict Filter
     const visibleWorkflows = useMemo(() => {
-        if (!workflows) return [];
-        if (filterType === 'ALL') return workflows;
+        logger.trace("WORKFLOW_EXPLORER", "Recalculating visible workflows engine compatibility...");
         
-        const filtered = workflows.filter((w: any) => w.type === filterType);
-        logger.trace("WORKFLOWS", "Filtered workflow list", { type: filterType, count: filtered.length });
-        return filtered;
-    }, [workflows, filterType]);
+        const scopeMap = new Map();
+
+        // 1. Gather allowed code-first scopes (STRICTLY filter out JOB and VIEW)
+        const baseScopes = (activeContext?.scopes || []).filter((s: any) => 
+            ['WIZARD', 'GOVERNANCE', 'SUB_FLOW'].includes(s.type)
+        );
+        
+        baseScopes.forEach((s: any) => scopeMap.set(s.key, { 
+            ...s, 
+            scope_key: s.key, 
+            is_code_first: true,
+            is_instantiated: false 
+        }));
+
+        // 2. Add/Merge db-first workflows
+        (workflows || []).forEach((w: any) => {
+            const key = w.scope_key || w.scope;
+            // 🛡️ Safety: Only union if it's an allowed state machine type
+            if (['WIZARD', 'GOVERNANCE', 'SUB_FLOW'].includes(w.type)) {
+                if (scopeMap.has(key)) {
+                    scopeMap.set(key, { ...scopeMap.get(key), ...w, scope_key: key, is_instantiated: true });
+                } else {
+                    scopeMap.set(key, { ...w, scope_key: key, is_instantiated: true, is_code_first: false });
+                }
+            }
+        });
+
+        // 3. Convert to array and apply user's UI filter
+        const result = Array.from(scopeMap.values()).filter(w => filterType === 'ALL' || w.type === filterType);
+        
+        logger.trace("WORKFLOW_EXPLORER", `Gallery compiled with ${result.length} compatible items`, { filter: filterType });
+        return result;
+    }, [activeContext?.scopes, workflows, filterType]);
 
     // ⚡ HANDLERS
     const handleSelectWorkflow = (scope: string) => {
-        logger.tell("WORKFLOWS", `👉 Selected Workflow Scope: ${scope}`);
+        logger.tell("WORKFLOW_EXPLORER", `👉 Navigating to Workflow Editor for Scope: ${scope}`);
         navigate(`/meta-v2/workflows/${domain}/${scope}?domain=${domain}`);
     };
 
     const handleCreateSuccess = (key: string) => {
-        logger.tell("WORKFLOWS", `✅ Workflow created successfully: ${key}`);
+        logger.tell("WORKFLOW_EXPLORER", `✅ Workflow created successfully: ${key}`);
         setModalState('');
         if (refreshWorkflows) refreshWorkflows();
         navigate(`/meta-v2/workflows/${domain}/${key}?domain=${domain}`);
@@ -71,7 +101,7 @@ export const WorkflowExplorer: React.FC<WorkflowExplorerProps> = ({ domain }) =>
             <div style={{ padding: 48, textAlign: 'center' }}>
                 <Spin size="large" />
                 <div style={{ marginTop: 16, color: token.colorTextSecondary }}>
-                    Loading Domain Workflows...
+                    Synchronizing Domain Workflows...
                 </div>
             </div>
         );
@@ -83,19 +113,18 @@ export const WorkflowExplorer: React.FC<WorkflowExplorerProps> = ({ domain }) =>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
                 <Space direction="vertical" size={0}>
                     <Title level={3} style={{ margin: 0 }}>Process Definitions</Title>
-                    <Text type="secondary">Manage the logic, forms, and jobs for {domain}.</Text>
+                    <Text type="secondary">Manage the logic and forms for {domain}.</Text>
                 </Space>
                 <Space>
                     <Segmented 
                         value={filterType}
                         onChange={(val) => {
-                            logger.whisper("UI", `Switched workflow filter to ${val}`);
+                            logger.trace("WORKFLOW_EXPLORER", `User changed filter segment to ${val}`);
                             setFilterType(val);
                         }}
                         options={[
                             { label: 'All', value: 'ALL' },
                             { label: 'Wizards', value: 'WIZARD' },
-                            { label: 'Jobs', value: 'JOB' },
                             { label: 'Rules', value: 'GOVERNANCE' }
                         ]}
                     />
@@ -103,7 +132,7 @@ export const WorkflowExplorer: React.FC<WorkflowExplorerProps> = ({ domain }) =>
                         type="primary" 
                         icon={<PlusOutlined />} 
                         onClick={() => {
-                            logger.tell("UI", "Intent: Create new workflow");
+                            logger.trace("WORKFLOW_EXPLORER", "User invoked Workflow Creation Modal");
                             setModalState('create');
                         }}
                     >
@@ -156,12 +185,17 @@ export const WorkflowExplorer: React.FC<WorkflowExplorerProps> = ({ domain }) =>
                                     <Text type="secondary" style={{ fontSize: 12, fontFamily: 'monospace' }}>
                                         {w.scope_key || w.scope}
                                     </Text>
+                                    {!w.is_instantiated && (
+                                        <Tag color="default" style={{ marginLeft: 8, fontSize: 10 }}>Requires Initialization</Tag>
+                                    )}
                                 </div>
                             </div>
                         </Space>
                         <Space>
                             <Tag color="purple">{w.type}</Tag>
-                            <Tag color="blue">v{w.version}</Tag>
+                            <Tag color={w.is_instantiated ? "blue" : "default"}>
+                                {w.is_instantiated ? `v${w.version}` : 'Unpublished'}
+                            </Tag>
                         </Space>
                     </div>
                 ))}
@@ -169,22 +203,21 @@ export const WorkflowExplorer: React.FC<WorkflowExplorerProps> = ({ domain }) =>
                 {visibleWorkflows.length === 0 && (
                     <Empty 
                         image={Empty.PRESENTED_IMAGE_SIMPLE}
-                        description={`No ${filterType === 'ALL' ? '' : filterType} workflows found for this Domain.`} 
+                        description={`No compatible ${filterType === 'ALL' ? '' : filterType} workflows found.`} 
                     />
                 )}
             </Space>
 
-            {/* ⚡ MODAL INJECTION (V2 Native) */}
+            {/* ⚡ MODAL INJECTION */}
             <WorkflowGenesis 
                 open={modalState === 'create'} 
                 onClose={() => {
-                    logger.whisper("UI", "Cancelled workflow creation");
+                    logger.trace("WORKFLOW_EXPLORER", "User cancelled workflow creation");
                     setModalState('');
                 }}
-                domain={domain} // Passed as pure string now, Genesis handles it natively
+                domain={domain}
                 onSuccess={handleCreateSuccess}
             />
         </div>
     );
 };
-

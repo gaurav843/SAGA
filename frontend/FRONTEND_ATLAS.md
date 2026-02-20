@@ -1,5 +1,5 @@
 # 🗺️ FLODOCK SYSTEM ATLAS (Prism V10)
-**Generated:** 2026-02-20 10:51
+**Generated:** 2026-02-20 11:36
 **Mode:** Total Recall (Full Comment Extraction).
 
 ---
@@ -3000,6 +3000,7 @@
 | Attribute | Value |
 | :--- | :--- |
 | **security-level** | `LEVEL 9 (UI Safe) */` |
+| **invariant** | `Avoids <Option> elements to prevent AntD click interception bugs. */` |
 
 **Components & Logic:**
 
@@ -3007,6 +3008,7 @@
   * **Logic Flow:**
     * `⚡ THE DUMB UI LINK: Read Actions directly from the Kernel's Context Schema`
     * `Derived options for target fields`
+    * `⚡ FIX: Use options array to prevent AntD click interception on complex DOM nodes`
 
 ---
 ### 📄 `EnforcementPanel.tsx`
@@ -3036,6 +3038,7 @@
 | Attribute | Value |
 | :--- | :--- |
 | **security-level** | `LEVEL 9 (UI Validation) */` |
+| **narrator** | `Traces all rule and consequence mutations deeply. */` |
 
 **Components & Logic:**
 
@@ -3080,18 +3083,13 @@
 
 ---
 ### 📄 `SubjectPicker.tsx`
-> Smart Context Selector. Fixes AntD rendering by matching values strictly to options.
-
-| Attribute | Value |
-| :--- | :--- |
-| **security-level** | `LEVEL 9 (Data Access) */` |
-| **narrator** | `Emits explicit string paths for the Logic Compiler. */` |
+> FILEPATH: frontend/src/domains/meta_v2/features/governance/components/editor/logic/SubjectPicker.tsx */
 
 **Components & Logic:**
 
 * **`SubjectPicker`**
   * **Logic Flow:**
-    * `⚡ THE DUMB UI LINK: Read Context directly from Kernel Capabilities`
+    * `⚡ THE DUMB UI LINK: Read Context safely using the Registry accessor`
     * `⚡ STATE HYDRATION: Restore tab and domain from existing value robustly`
     * `1. Check Context Roots (e.g. actor., system.)`
     * `2. Check Global Domain (e.g., "USER.email")`
@@ -3100,11 +3098,12 @@
     * `⚡ LAZY LOAD: Global Domain List`
     * `⚡ LAZY LOAD: Specific Domain Schema`
     * `--- RENDERERS ---`
-    * `⚡ FIX: Map the Host options to explicitly include the 'host.' prefix so the Select component`
-    * `accurately matches the incoming `value` prop without clearing itself.`
-    * `⚡ DYNAMIC CASCADER`
+    * `⚡ FIX: Use pure strings. Prevents AntD `rc-select` from intercepting clicks on internal spans!`
+    * `⚡ DYNAMIC CASCADER OPTIONS`
     * `Cascader needs the exact final value at the leaf node`
+    * `⚡ TS FIX: Safely coerce label to String for filtering`
     * `⚡ FIX: Reconstruct array path for Cascader (e.g., 'actor.id' -> ['actor', 'actor.id'])`
+    * `⚡ TS FIX: Narrow type explicitly for the Cascader array`
 
 ---
 ## 📂 `frontend/src/domains/meta_v2/features/governance/components/list/`

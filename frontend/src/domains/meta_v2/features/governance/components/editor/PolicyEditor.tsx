@@ -51,7 +51,7 @@ export const PolicyEditor: React.FC<PolicyEditorProps> = ({
     const [localDraft, setLocalDraft] = useState<PolicyDraft>(initialDraft);
     
     // ⚡ DEEP LINKING BY DEFAULT (Cures History Drawer Amnesia)
-    const [historyMode, setHistoryMode] = useUrlState('history', '');
+    const [historyMode, setHistoryMode] = useUrlState<'open' | ''>('history', '');
 
     useEffect(() => {
         setLocalDraft(initialDraft);
