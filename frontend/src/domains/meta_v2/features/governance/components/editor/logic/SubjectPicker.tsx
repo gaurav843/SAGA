@@ -1,13 +1,13 @@
-// FILEPATH: frontend/src/domains/meta_v2/features/governance/components/editor/logic/SubjectPicker.tsx
-// @file: Subject Picker (SVO Component - V2)
-// @role: 🎨 UI Presentation */
-// @author: The Engineer
-// @description: Smart Context Selector. Fixes AntD rendering by matching values strictly to options.
-// @security-level: LEVEL 9 (Data Access) */
-// @narrator: Emits explicit string paths for the Logic Compiler. */
+/* FILEPATH: frontend/src/domains/meta_v2/features/governance/components/editor/logic/SubjectPicker.tsx */
+/* @file: Subject Picker (SVO Component - V2) */
+/* @role: 🎨 UI Presentation */
+/* @author: The Engineer */
+/* @description: Smart Context Selector. Strict TS bindings, avoids AntD click-interception, deep telemetry. */
+/* @security-level: LEVEL 9 (Data Access) */
+/* @narrator: Emits explicit string paths for the Logic Compiler. */
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Select, Cascader, Tabs, Spin, Space, Typography, theme } from 'antd';
+import { Select, Cascader, Tabs, Spin, Space } from 'antd';
 import { DatabaseOutlined, UserOutlined, GlobalOutlined, AppstoreOutlined } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
@@ -16,10 +16,12 @@ import { API_BASE_URL } from '@/config';
 import { logger } from '@/platform/logging/Narrator';
 import { useCapabilities } from '@/_kernel/CapabilitiesContext';
 
+// ⚡ STRICT TYPING: Resolves VSCode Interface missing property errors
 interface SchemaField {
     key: string;
     label: string;
-    data_type: string;
+    data_type?: string; 
+    type?: string; // Fallback for context fields
     [key: string]: any;
 }
 
@@ -33,13 +35,13 @@ interface SubjectPickerProps {
 export const SubjectPicker: React.FC<SubjectPickerProps> = ({ 
     value, onChange, hostFields, currentDomain 
 }) => {
-    const { token } = theme.useToken();
     const [activeTab, setActiveTab] = useState<string>('HOST');
     const [selectedGlobalDomain, setSelectedGlobalDomain] = useState<string | null>(null);
 
-    // ⚡ THE DUMB UI LINK: Read Context directly from Kernel Capabilities
-    const { capabilities } = useCapabilities();
-    const contextSchema = capabilities?.context_schema || {};
+    // ⚡ THE DUMB UI LINK: Read Context safely using the Registry accessor
+    const registry = useCapabilities();
+    const capabilities = registry.getCapabilities();
+    const contextSchema = (capabilities?.context_schema as Record<string, SchemaField[]>) || {};
     const dynamicContextRoots = Object.keys(contextSchema);
 
     // ⚡ STATE HYDRATION: Restore tab and domain from existing value robustly
@@ -112,36 +114,36 @@ export const SubjectPicker: React.FC<SubjectPickerProps> = ({
 
     // --- RENDERERS ---
     
-    // ⚡ FIX: Map the Host options to explicitly include the 'host.' prefix so the Select component
-    // accurately matches the incoming `value` prop without clearing itself.
+    // ⚡ FIX: Use pure strings. Prevents AntD `rc-select` from intercepting clicks on internal spans!
     const renderHostFieldOptions = (fields: SchemaField[]) => {
         if (!fields || !Array.isArray(fields)) return [];
         return fields.map(f => ({
-            label: `${f.label} [${f.data_type || 'ANY'}]`, // Safe primitive string
-            value: `host.${f.key}` // ⚡ ENFORCED PREFIX
+            label: `${f.label} [${f.data_type || f.type || 'ANY'}]`, // Safe primitive string
+            value: `host.${f.key}` // ⚡ ENFORCED PREFIX for JMESPath Engine
         }));
     };
 
     const renderGlobalFieldOptions = (fields: SchemaField[]) => {
         if (!fields || !Array.isArray(fields)) return [];
         return fields.map(f => ({
-            label: `${f.label} [${f.data_type || 'ANY'}]`, 
+            label: `${f.label} [${f.data_type || f.type || 'ANY'}]`, 
             value: f.key
         }));
     };
 
-    // ⚡ DYNAMIC CASCADER
+    // ⚡ DYNAMIC CASCADER OPTIONS
     const contextOptions = useMemo(() => {
         return Object.entries(contextSchema).map(([namespace, fields]) => ({
             label: namespace.charAt(0).toUpperCase() + namespace.slice(1),
             value: namespace,
             // Cascader needs the exact final value at the leaf node
-            children: (fields as any[]).map(f => ({
-                label: `${f.label} [${f.type || 'ANY'}]`, 
+            children: (fields || []).map((f: SchemaField) => ({
+                label: `${f.label} [${f.type || f.data_type || 'ANY'}]`, 
                 value: `${namespace}.${f.key}` 
             }))
         }));
     }, [contextSchema]);
+
 
     const HostTab = () => (
         <Select
@@ -149,15 +151,17 @@ export const SubjectPicker: React.FC<SubjectPickerProps> = ({
             style={{ width: '100%' }}
             placeholder={`Search ${currentDomain} fields...`}
             options={renderHostFieldOptions(hostFields)}
-            value={value || undefined} // Must be undefined to show placeholder if empty
-            onChange={(val) => {
+            value={value || undefined} // ⚡ FIX: undefined prevents empty string rendering crash
+            onChange={(val: string) => {
                 logger.trace("UI", `Selected Host field`, { field: val });
                 onChange(val);
             }}
             listHeight={300}
             suffixIcon={<DatabaseOutlined />}
+            // ⚡ TS FIX: Safely coerce label to String for filtering
             filterOption={(input, option) => 
-                ((option?.label as string) || '').toLowerCase().includes(input.toLowerCase())
+                String(option?.label || '').toLowerCase().includes(input.toLowerCase()) ||
+                String(option?.value || '').toLowerCase().includes(input.toLowerCase())
             }
         />
     );
@@ -171,7 +175,8 @@ export const SubjectPicker: React.FC<SubjectPickerProps> = ({
             // ⚡ FIX: Reconstruct array path for Cascader (e.g., 'actor.id' -> ['actor', 'actor.id'])
             value={value && value.includes('.') ? [value.split('.')[0], value] : undefined}
             onChange={(val) => {
-                if (val && val.length > 0) {
+                // ⚡ TS FIX: Narrow type explicitly for the Cascader array
+                if (Array.isArray(val) && val.length > 0) {
                     const finalPath = val[val.length - 1] as string;
                     logger.trace("UI", `Selected Context field`, { field: finalPath });
                     onChange(finalPath);
@@ -187,7 +192,7 @@ export const SubjectPicker: React.FC<SubjectPickerProps> = ({
                 style={{ width: '100%' }}
                 loading={loadingDomains}
                 options={groupedGlobalDomains}
-                onChange={setSelectedGlobalDomain}
+                onChange={(val: string) => setSelectedGlobalDomain(val)}
                 value={selectedGlobalDomain}
                 suffixIcon={<AppstoreOutlined />}
             />
@@ -199,13 +204,14 @@ export const SubjectPicker: React.FC<SubjectPickerProps> = ({
                     showSearch
                     options={renderGlobalFieldOptions(globalFields)}
                     value={value || undefined}
-                    onChange={(val) => {
+                    onChange={(val: string) => {
                         logger.trace("UI", `Selected Global field`, { field: val });
                         onChange(val);
                     }}
                     status={!value ? 'warning' : undefined}
                     filterOption={(input, option) => 
-                        ((option?.label as string) || '').toLowerCase().includes(input.toLowerCase())
+                        String(option?.label || '').toLowerCase().includes(input.toLowerCase()) ||
+                        String(option?.value || '').toLowerCase().includes(input.toLowerCase())
                     }
                 />
             )}
@@ -228,4 +234,4 @@ export const SubjectPicker: React.FC<SubjectPickerProps> = ({
             />
         </div>
     );
-};
+};

@@ -1,5 +1,5 @@
 # 🗺️ FLODOCK SYSTEM ATLAS (Prism V10)
-**Generated:** 2026-02-20 10:10
+**Generated:** 2026-02-20 10:51
 **Mode:** Total Recall (Full Comment Extraction).
 
 ---
@@ -3061,33 +3061,50 @@
 ### 📄 `LogicBuilder.tsx`
 > Recursive Subject-Verb-Object Composer for Governance Rules.
 
+| Attribute | Value |
+| :--- | :--- |
+| **security-level** | `LEVEL 9 (Functional State Safety) */` |
+| **invariant** | `The AST (root) is the absolute source of truth for the Visual Mode. */` |
+| **narrator** | `Traces AST mutations and compilations. */` |
+
 **Components & Logic:**
 
 * **`LogicBuilder`**
   * **Logic Flow:**
-    * `PARSER (Heuristic Fallback to Code Mode)`
+    * `⚡ SAFEGUARD: Switch to CODE mode if there's an existing complex value we can't visually parse yet`
     * `COMPILER`
+    * `⚡ FIX: Gracefully ignore incomplete rules without destroying the string`
     * `HANDLERS`
+    * `⚡ FIX: Functional State Update ensures we never drop intermediate keystrokes`
     * `RENDERERS`
 
 ---
 ### 📄 `SubjectPicker.tsx`
-> Smart Context Selector.
+> Smart Context Selector. Fixes AntD rendering by matching values strictly to options.
+
+| Attribute | Value |
+| :--- | :--- |
+| **security-level** | `LEVEL 9 (Data Access) */` |
+| **narrator** | `Emits explicit string paths for the Logic Compiler. */` |
 
 **Components & Logic:**
 
 * **`SubjectPicker`**
   * **Logic Flow:**
     * `⚡ THE DUMB UI LINK: Read Context directly from Kernel Capabilities`
-    * `⚡ STATE HYDRATION: Restore tab and domain from existing value`
-    * `Check Host`
-    * `Check Dynamic Context Roots (e.g. actor., system., config.)`
-    * `Assume Global Domain (e.g., "user.email" -> Domain "USER")`
-    * `Ensure it's not a known root`
+    * `⚡ STATE HYDRATION: Restore tab and domain from existing value robustly`
+    * `1. Check Context Roots (e.g. actor., system.)`
+    * `2. Check Global Domain (e.g., "USER.email")`
+    * `Ensure it's not a known root or 'HOST'`
+    * `3. Fallback to Host (Any un-prefixed field or explicitly 'host.email')`
     * `⚡ LAZY LOAD: Global Domain List`
     * `⚡ LAZY LOAD: Specific Domain Schema`
     * `--- RENDERERS ---`
-    * `⚡ DYNAMIC CASCADER (Builds options from Backend schema payload)`
+    * `⚡ FIX: Map the Host options to explicitly include the 'host.' prefix so the Select component`
+    * `accurately matches the incoming `value` prop without clearing itself.`
+    * `⚡ DYNAMIC CASCADER`
+    * `Cascader needs the exact final value at the leaf node`
+    * `⚡ FIX: Reconstruct array path for Cascader (e.g., 'actor.id' -> ['actor', 'actor.id'])`
 
 ---
 ## 📂 `frontend/src/domains/meta_v2/features/governance/components/list/`

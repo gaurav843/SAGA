@@ -1,11 +1,12 @@
-// FILEPATH: frontend/src/domains/meta_v2/features/governance/components/editor/ConsequenceStack.tsx
+// /* FILEPATH: frontend/src/domains/meta_v2/features/governance/components/editor/ConsequenceStack.tsx */
 // @file: Consequence Stack Manager
 // @role: 🎨 UI Presentation / 🧠 Logic Container */
 // @author: The Engineer
 // @description: Renders the action stack for a rule. Driven by dynamic Backend Capabilities (Dumb UI Pattern).
 // @security-level: LEVEL 9 (UI Safe) */
+// @invariant: Avoids <Option> elements to prevent AntD click interception bugs. */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Button, Select, Input, Typography, Space, theme, Empty } from 'antd';
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 
@@ -16,7 +17,6 @@ import { useCapabilities } from '@/_kernel/CapabilitiesContext';
 import type { Consequence, SchemaField } from '../../../../../meta/features/governance/types';
 
 const { Text } = Typography;
-const { Option, OptGroup } = Select;
 
 interface ConsequenceStackProps {
     ruleIdx: number;
@@ -33,11 +33,34 @@ export const ConsequenceStack: React.FC<ConsequenceStackProps> = ({
     const { token } = theme.useToken();
     
     // ⚡ THE DUMB UI LINK: Read Actions directly from the Kernel's Context Schema
-    const { capabilities } = useCapabilities();
+    const capabilities = useCapabilities().getCapabilities();
     const actions = capabilities?.actions || [];
 
     // Derived options for target fields
     const hostFields = schemaFields.filter(f => f.group === 'HOST');
+
+    // ⚡ FIX: Use options array to prevent AntD click interception on complex DOM nodes
+    const actionOptions = useMemo(() => {
+        return actions.map((group: any) => ({
+            label: group.label,
+            options: group.options.map((opt: any) => ({
+                label: (
+                    <Space style={{ pointerEvents: 'none' }}> {/* pointerEvents: 'none' prevents interception */}
+                        <IconFactory icon={opt.icon} style={{ color: opt.color }} />
+                        {opt.label}
+                    </Space>
+                ),
+                value: opt.value
+            }))
+        }));
+    }, [actions]);
+
+    const targetFieldOptions = useMemo(() => {
+        return hostFields.map(f => ({
+            label: f.label,
+            value: f.key.replace('host.', '')
+        }));
+    }, [hostFields]);
 
     return (
         <div style={{ background: token.colorFillAlter, padding: 12, borderRadius: '0 0 8px 8px', border: `1px solid ${token.colorBorderSecondary}`, borderTop: 'none' }}>
@@ -57,25 +80,13 @@ export const ConsequenceStack: React.FC<ConsequenceStackProps> = ({
                             <Select 
                                 value={cons.type} 
                                 style={{ width: 220 }} 
+                                options={actionOptions}
                                 onChange={v => {
                                     logger.trace("UI", `Changed consequence type to ${v}`, { ruleIdx, cIdx });
                                     onUpdate(ruleIdx, cIdx, 'type', v);
                                 }}
                                 dropdownMatchSelectWidth={false}
-                            >
-                                {actions.map((group: any) => (
-                                    <OptGroup label={group.label} key={group.label}>
-                                        {group.options.map((opt: any) => (
-                                            <Option value={opt.value} key={opt.value}>
-                                                <Space>
-                                                    <IconFactory icon={opt.icon} style={{ color: opt.color }} />
-                                                    {opt.label}
-                                                </Space>
-                                            </Option>
-                                        ))}
-                                    </OptGroup>
-                                ))}
-                            </Select>
+                            />
 
                             {/* DYNAMIC PARAMS */}
                             <div style={{ flex: 1, display: 'flex', gap: 8 }}>
@@ -94,13 +105,13 @@ export const ConsequenceStack: React.FC<ConsequenceStackProps> = ({
                                         placeholder="Target Field"
                                         style={{ minWidth: 150 }}
                                         showSearch
+                                        options={targetFieldOptions}
                                         value={cons.params?.target_field}
-                                        onChange={v => onUpdate(ruleIdx, cIdx, 'params.target_field', v)}
-                                    >
-                                        {hostFields.map(f => (
-                                            <Option key={f.key} value={f.key.replace('host.', '')}>{f.label}</Option>
-                                        ))}
-                                    </Select>
+                                        onChange={v => {
+                                            logger.trace("UI", `Selected target field for consequence`, { field: v });
+                                            onUpdate(ruleIdx, cIdx, 'params.target_field', v);
+                                        }}
+                                    />
                                 )}
 
                                 {/* VALUE */}
@@ -130,4 +141,3 @@ export const ConsequenceStack: React.FC<ConsequenceStackProps> = ({
         </div>
     );
 };
-

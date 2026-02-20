@@ -4,6 +4,7 @@
 // @author: The Engineer
 // @description: Advanced Policy Editor utilizing isolated Fractal Components and URL state.
 // @security-level: LEVEL 9 (UI Validation) */
+// @narrator: Traces all rule and consequence mutations deeply. */
 
 import React, { useState, useEffect } from 'react';
 import { Form, Input, Button, Card, Row, Col, Typography, theme, Space, Divider, Switch, Tag, Tooltip } from 'antd';
@@ -12,15 +13,14 @@ import { DeleteOutlined, SafetyCertificateOutlined, HistoryOutlined, CloudUpload
 import { logger } from '@/platform/logging/Narrator';
 import { useUrlState } from '@/platform/hooks/useUrlState';
 
-// ⚡ V2 HOOKS & COMPONENTS
+// ⚡ V2 HOOKS & COMPONENTS (Strictly V2 Paths)
 import { useGovernance } from '../../hooks/useGovernance';
 import { ConsequenceStack } from './ConsequenceStack';
+import { LogicBuilder } from './logic/LogicBuilder';
+import { TestPanel } from './TestPanel';
+import { HistoryDrawer } from './HistoryDrawer';
 
-// ⚡ V1 IMPORTS (Pending Migration to V2 for Batch 3)
-import { LogicBuilder } from '../../../../../meta/features/governance/components/editor/LogicBuilder';
-import { TestPanel } from '../../../../../meta/features/governance/components/editor/TestPanel';
-import { HistoryDrawer } from '../../../../../meta/features/governance/components/editor/HistoryDrawer';
-
+// Types are shared from Kernel/Meta
 import type { PolicyDraft, Rule, Consequence } from '../../../../../meta/features/governance/types';
 
 const { TextArea } = Input;
@@ -74,6 +74,7 @@ export const PolicyEditor: React.FC<PolicyEditorProps> = ({
     };
 
     const handleLogicChange = (idx: number, val: string) => {
+        logger.trace("LOGIC", `Updating AST Logic for Rule ${idx}`, { compiledLogic: val });
         const rules = [...localDraft.rules];
         if (rules[idx]) {
             rules[idx] = { ...rules[idx], logic: val };
@@ -82,6 +83,7 @@ export const PolicyEditor: React.FC<PolicyEditorProps> = ({
     };
 
     const addConsequence = (ruleIdx: number) => {
+        logger.trace("LOGIC", `Adding new Consequence to Rule ${ruleIdx}`, {});
         const rules = [...localDraft.rules];
         const newConsequence: Consequence = {
             id: `cons_${Date.now()}`,
@@ -93,6 +95,7 @@ export const PolicyEditor: React.FC<PolicyEditorProps> = ({
     };
 
     const removeConsequence = (ruleIdx: number, consIdx: number) => {
+        logger.trace("LOGIC", `Removing Consequence ${consIdx} from Rule ${ruleIdx}`, {});
         const rules = [...localDraft.rules];
         const cons = [...(rules[ruleIdx].consequences || [])];
         cons.splice(consIdx, 1);
@@ -101,6 +104,7 @@ export const PolicyEditor: React.FC<PolicyEditorProps> = ({
     };
 
     const updateConsequence = (ruleIdx: number, consIdx: number, field: string, val: any) => {
+        logger.trace("LOGIC", `Updating Consequence [Rule ${ruleIdx}, Cons ${consIdx}]`, { field, val });
         const rules = [...localDraft.rules];
         const cons = [...rules[ruleIdx].consequences];
         
@@ -129,11 +133,13 @@ export const PolicyEditor: React.FC<PolicyEditorProps> = ({
     };
 
     const deleteRule = (idx: number) => {
+        logger.trace("LOGIC", `Deleted Rule ${idx}`, {});
         const rules = localDraft.rules.filter((_, i) => i !== idx);
         setLocalDraft(p => ({ ...p, rules }));
     };
 
     const handleDualSave = (asActive: boolean) => {
+        logger.tell("UI", `💾 Saving Policy Draft (Active: ${asActive})`, { key: localDraft.key });
         onSave({ ...localDraft, is_active: asActive });
     };
 
@@ -185,7 +191,21 @@ export const PolicyEditor: React.FC<PolicyEditorProps> = ({
                         </Col>
                     </Row>
                     <Form.Item label="Description"><TextArea rows={2} value={localDraft.description} onChange={e => setLocalDraft(p => ({ ...p, description: e.target.value }))} /></Form.Item>
-                    <Row justify="space-between"><Col><Space><Text type="secondary">Status:</Text><Switch checked={localDraft.is_active} onChange={c => setLocalDraft(p => ({ ...p, is_active: c }))} /></Space></Col><Col>{onDelete && <Button danger type="text" icon={<DeleteOutlined />} onClick={onDelete}>Deactivate</Button>}</Col></Row>
+                    <Row justify="space-between">
+                        <Col>
+                            <Space>
+                                <Text type="secondary">Status:</Text>
+                                <Switch checked={localDraft.is_active} onChange={c => {
+                                    logger.trace("UI", `Toggled policy status to ${c}`, {});
+                                    setLocalDraft(p => ({ ...p, is_active: c }));
+                                }} />
+                            </Space>
+                        </Col>
+                        <Col>{onDelete && <Button danger type="text" icon={<DeleteOutlined />} onClick={() => {
+                            logger.trace("UI", "Clicked Deactivate Policy", {});
+                            onDelete();
+                        }}>Deactivate</Button>}</Col>
+                    </Row>
                 </Card>
 
                 <Divider orientation="left">Governance Rules & Verdicts</Divider>
@@ -235,4 +255,3 @@ export const PolicyEditor: React.FC<PolicyEditorProps> = ({
         </div>
     );
 };
-
