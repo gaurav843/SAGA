@@ -1,0 +1,14 @@
+# FILEPATH: backend/.gitignore
+# ... existing ignores ...
+
+# ⚡ IGNORE NERVOUS SYSTEM INFRASTRUCTURE
+# We do NOT commit Java or Kafka binaries.
+# They are downloaded on-demand by scripts/setup_nervous_system.ps1
+infrastructure/
+start_kafka.bat
+start_zookeeper.bat
+
+# Ignore Logs
+*.log
+*.tmp
+backend/infrastructure/kafka/logs/

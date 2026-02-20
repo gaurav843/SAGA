@@ -1,0 +1,44 @@
+/* FILEPATH: frontend/src/index.css */
+/* @file: Global Stylesheet (Scroll Liberation) */
+/* @author: ansav8@gmail.com */
+/* @description: Integrated with UniversalNarrator for maximum verbosity. */
+/* Note: Strictly enforces scrollbar availability at the browser level. */
+
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color-scheme: light dark;
+}
+
+/* ⚡ THE GREAT UNLOCK ⚡ */
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  /* Remove height locks to allow natural document length */
+  height: auto !important; 
+  min-height: 100% !important;
+  /* Re-enable native browser scrolling */
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Ant Design ProLayout Overrides */
+.ant-design-pro-layout-content {
+    overflow: visible !important; /* Block ProLayout from clipping children */
+    height: auto !important;
+}
+
+.ant-layout {
+    min-height: 100vh !important;
+    background: transparent !important;
+}
+
